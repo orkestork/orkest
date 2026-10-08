@@ -15,7 +15,7 @@ export type ExecContext = {
   depth?: number;
 };
 
-export type Branding = { primaryColor?: string; logoUrl?: string; displayName?: string };
+export type Branding = { primaryColor?: string; logoUrl?: string; displayName?: string; theme?: unknown };
 
 export type OrgContext = ExecContext & {
   user: { id: string; name: string; email: string; isPlatformAdmin: boolean };

@@ -5,8 +5,9 @@
 import type { CSSProperties, ReactNode } from "react";
 
 const C = {
-  deep: "#32125e", violet: "#6f35b5", lav: "#bda5ff", pink: "#e31572",
-  lime: "#b6ff5c", amber: "#ffb547", teal: "#1fc7b6", ink: "#11100f", white: "#ffffff",
+  // Colores como variables CSS: la paleta de íconos de cada organización los reemplaza (ver lib/ui/theme.ts)
+  deep: "var(--ic-deep, #32125e)", violet: "var(--ic-violet, #6f35b5)", lav: "var(--ic-lav, #bda5ff)", pink: "var(--ic-pink, #e31572)",
+  lime: "var(--ic-lime, #b6ff5c)", amber: "var(--ic-amber, #ffb547)", teal: "var(--ic-teal, #1fc7b6)", ink: "#11100f", white: "#ffffff",
 };
 /** Superposición: la intersección de dos formas se oscurece, como tinta. */
 const mx: CSSProperties = { mixBlendMode: "multiply" };
@@ -196,10 +197,17 @@ const ICONS: Record<string, ReactNode> = {
 
 export const APP_ICON_NAMES = Object.keys(ICONS);
 
-export function AppIcon({ name, size = 56 }: { name: string; size?: number }) {
+export type IconPack = "duo" | "line" | "glyph";
+
+/**
+ * Ícono de app. El paquete (duotono, lineal o sólido) lo define el tema de la organización
+ * (atributo data-icons en el lienzo); `pack` lo fija para una vista previa.
+ */
+export function AppIcon({ name, size = 56, pack }: { name: string; size?: number; pack?: IconPack }) {
   return (
-    <svg viewBox="0 0 64 64" width={size} height={size} aria-hidden="true" style={{ isolation: "isolate" }}>
-      {ICONS[name] ?? <rect x="10" y="10" width="44" height="44" rx="12" fill={C.violet} />}
+    <svg viewBox="0 0 64 64" width={size} height={size} aria-hidden="true" className="app-icon" data-pack={pack} style={{ isolation: "isolate" }}>
+      <rect className="ic-bg" x="0" y="0" width="64" height="64" rx="16" />
+      <g className="ic-shapes">{ICONS[name] ?? <rect x="10" y="10" width="44" height="44" rx="12" fill={C.violet} />}</g>
     </svg>
   );
 }

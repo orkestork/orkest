@@ -10,7 +10,7 @@ import { logout } from "@/app/login/actions";
 
 type Props = {
   apps: LauncherApp[];
-  org: { id: string; name: string; color: string };
+  org: { id: string; name: string; color: string; logoUrl?: string };
   memberships: { orgId: string; orgName: string; roleName: string }[];
   user: { name: string; email: string; role: string; isPlatformAdmin: boolean };
   unread: number;
@@ -85,6 +85,8 @@ export function TopBar({ apps, org, memberships, user, unread, pendingApprovals 
           ) : (
             <span className="hidden rounded-full border border-[var(--ork-rule)] bg-white/70 px-3 py-1.5 text-xs font-medium sm:inline">{org.name}</span>
           )}
+          {/* eslint-disable-next-line @next/next/no-img-element -- logo externo configurado por la empresa */}
+          {org.logoUrl && <img src={org.logoUrl} alt={org.name} className="hidden h-7 w-auto max-w-28 object-contain sm:block" />}
 
           <details className="relative">
             <summary className="grid h-9 w-9 cursor-pointer list-none place-items-center rounded-full text-sm font-semibold text-white" style={{ background: org.color }} title={user.name}>

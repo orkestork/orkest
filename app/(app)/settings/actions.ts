@@ -20,8 +20,6 @@ const s = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
 export async function saveCompany(_: ActionResult, form: FormData): Promise<ActionResult> {
   return safeAction(async () => {
     const ctx = await actionContext("org.settings.manage");
-    const color = s(form, "primaryColor");
-    if (color && !/^#[0-9a-fA-F]{6}$/.test(color)) return { error: "Color inválido (usa #RRGGBB)" };
     const settings = {
       ...ctx.org.settings,
       radar: {
@@ -36,7 +34,6 @@ export async function saveCompany(_: ActionResult, form: FormData): Promise<Acti
       data: {
         name: s(form, "name") || ctx.org.name, legalName: s(form, "legalName") || null, taxId: s(form, "taxId") || null,
         currency: s(form, "currency") || "COP", timezone: s(form, "timezone") || "America/Bogota",
-        branding: { primaryColor: color || undefined, displayName: s(form, "displayName") || undefined, logoUrl: s(form, "logoUrl") || undefined },
         settings,
       },
     });

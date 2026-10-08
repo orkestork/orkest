@@ -44,8 +44,8 @@ body {
 /* Fondo del área de trabajo: papel cálido con orbes difusos (como or-k.co) */
 .ork-canvas {
   background:
-    radial-gradient(60rem 40rem at 105% -10%, rgba(189, 165, 255, 0.38), transparent 60%),
-    radial-gradient(40rem 30rem at -10% 110%, rgba(227, 21, 114, 0.07), transparent 60%),
+    radial-gradient(60rem 40rem at 105% -10%, color-mix(in srgb, var(--ork-lavender) 38%, transparent), transparent 60%),
+    radial-gradient(40rem 30rem at -10% 110%, color-mix(in srgb, var(--ork-pink) 7%, transparent), transparent 60%),
     radial-gradient(30rem 20rem at 70% 100%, rgba(255, 181, 71, 0.08), transparent 60%),
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.07 0 0 0 0 0.06 0 0 0 0 0.06 0 0 0 .06 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
     var(--ork-paper-light);
@@ -67,3 +67,49 @@ a:hover > .app-tile, a:focus-visible > .app-tile {
 a:hover > .app-tile svg { transform: scale(1.06) rotate(-3deg); }
 
 ::selection { background: var(--ork-lavender); color: var(--ork-ink); }
+
+/* ───────── Paquetes de íconos (banco de recursos de apariencia) ─────────
+   duo   = duotono a color (predeterminado)
+   line  = lineal de un solo color
+   glyph = glifo blanco sobre recuadro de color
+   El tema de la organización lo fija en el lienzo con data-icons; data-pack lo fuerza en una vista previa. */
+.app-icon .ic-bg { display: none; }
+[data-icons="line"] .app-icon:not([data-pack]) .ic-shapes *,
+.app-icon[data-pack="line"] .ic-shapes * {
+  fill: none !important;
+  stroke: var(--ic-line, var(--ork-purple)) !important;
+  stroke-width: 2.6px !important;
+  mix-blend-mode: normal !important;
+  stroke-linejoin: round;
+}
+[data-icons="glyph"] .app-icon:not([data-pack]) .ic-bg,
+.app-icon[data-pack="glyph"] .ic-bg { display: block; fill: var(--ic-tile, var(--ork-purple)); }
+[data-icons="glyph"] .app-icon:not([data-pack]) .ic-shapes,
+.app-icon[data-pack="glyph"] .ic-shapes { transform: scale(0.62); transform-origin: 32px 32px; }
+[data-icons="glyph"] .app-icon:not([data-pack]) .ic-shapes *,
+.app-icon[data-pack="glyph"] .ic-shapes * {
+  /* Formas en blanco separadas por un contorno del color del recuadro */
+  fill: #fff !important;
+  stroke: var(--ic-tile, var(--ork-purple)) !important;
+  stroke-width: 3px;
+  paint-order: stroke;
+  mix-blend-mode: normal !important;
+}
+[data-icons="glyph"] .app-icon:not([data-pack]) .ic-shapes [fill="none"],
+.app-icon[data-pack="glyph"] .ic-shapes [fill="none"] {
+  /* Trazos internos (palomitas, gráficas) en el color del recuadro sobre el blanco */
+  fill: none !important;
+  stroke: var(--ic-tile, var(--ork-purple)) !important;
+  stroke-width: 4px;
+}
+.app-icon[data-pack="duo"] .ic-bg { display: none; }
+.app-icon[data-pack="duo"] .ic-shapes { transform: none; }
+
+/* ───────── Fondo del lienzo y tarjetas de apps (tema) ───────── */
+.ork-canvas[data-canvas="plain"] { background: var(--ork-paper-light); }
+.ork-canvas[data-canvas="dots"] {
+  background: radial-gradient(circle at 1px 1px, color-mix(in srgb, var(--ork-purple) 18%, transparent) 1px, transparent 0) 0 0 / 22px 22px, var(--ork-paper-light);
+}
+[data-tiles="tinted"] .app-tile { background: color-mix(in srgb, var(--ork-lavender) 30%, #fff); }
+[data-tiles="flat"] .app-tile { background: transparent; box-shadow: none; }
+[data-tiles="flat"] a:hover > .app-tile { background: color-mix(in srgb, var(--ork-lavender) 25%, transparent); box-shadow: none; }

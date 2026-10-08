@@ -1,3 +1,4 @@
+import Link from "@/components/plink";
 import { requirePermission } from "@/lib/core/context";
 import { radarSettings } from "@/lib/radar/engine";
 import { prisma } from "@/lib/core/prisma";
@@ -24,12 +25,8 @@ export default async function CompanySettings() {
             <Field label="Zona horaria"><input name="timezone" defaultValue={org.timezone} className={input} /></Field>
           </div>
         </Card>
-        <Card title="Branding">
-          <div className="grid gap-4 sm:grid-cols-3">
-            <Field label="Nombre visible"><input name="displayName" defaultValue={ctx.org.branding.displayName ?? ""} className={input} /></Field>
-            <Field label="Color de la organización"><input name="primaryColor" type="color" defaultValue={ctx.org.branding.primaryColor ?? "#6f35b5"} className="h-10 w-full rounded-lg border border-slate-300" /></Field>
-            <Field label="URL del logo"><input name="logoUrl" defaultValue={ctx.org.branding.logoUrl ?? ""} className={input} /></Field>
-          </div>
+        <Card title="Apariencia">
+          <p className="text-sm text-stone-600">Nombre visible, logo, colores, fondo y paquete de íconos se configuran en <Link href="/settings/appearance" className="font-medium text-[var(--ork-violet)] underline">Apariencia</Link>, con vista previa en vivo.</p>
         </Card>
         {ctx.hasModule("radar") && (
           <Card title="Umbrales de Radar">

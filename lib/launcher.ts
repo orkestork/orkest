@@ -64,6 +64,7 @@ export function launcherApps(ctx: OrgContext, customs: { key: string; labelPlura
 
   const settingsNav = [
     { label: "Empresa", href: "/settings", p: "org.settings.manage" },
+    { label: "Apariencia", href: "/settings/appearance", p: "org.settings.manage" },
     { label: "Usuarios", href: "/settings/users", p: "org.users.manage" },
     { label: "Roles", href: "/settings/roles", p: "org.roles.manage" },
     { label: "API y webhooks", href: "/settings/integrations", p: "integrations.manage" },
