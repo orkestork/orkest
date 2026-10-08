@@ -13,7 +13,6 @@ export const metadata = { title: "Pedidos de venta" };
 const PAGE = 80;
 /** Agrupar trae como máximo esta cantidad de pedidos (los más recientes según el orden). */
 const GROUP_LIMIT = 2000;
-const DAY = 86400000;
 const n = (v: unknown) => Number(v ?? 0);
 const when = (d: Date) => d.toLocaleString("es-CO", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
 const monthKey = (d: Date) => d.toLocaleDateString("es-CO", { month: "long", year: "numeric" });
@@ -41,7 +40,7 @@ export default async function SalesOrders({ searchParams }: PageProps<"/sales/or
   if (active.includes("deliver")) { where.status = { in: statusKeys.length ? statusKeys : ["confirmed"] }; where.deliveryStatus = { not: "full" }; }
   if (active.includes("invoice")) where.invoiceStatus = "to_invoice";
   if (active.includes("month")) { const d = new Date(); d.setDate(1); d.setHours(0, 0, 0, 0); where.createdAt = { gte: d }; }
-  if (active.includes("30d")) where.createdAt = { gte: new Date(Date.now() - 30 * DAY) };
+  if (active.includes("30d")) { const d = new Date(); d.setDate(d.getDate() - 30); where.createdAt = { gte: d }; }
   const q = str("q");
   if (q) where.OR = [{ number: { contains: q, mode: "insensitive" } }, { customer: { name: { contains: q, mode: "insensitive" } } }];
 
@@ -127,7 +126,8 @@ export default async function SalesOrders({ searchParams }: PageProps<"/sales/or
   }
 
   // Vista gráfico: total vendido por mes (últimos 12 meses, con los filtros aplicados)
-  let months: string[] = [], byMonth: number[] = [];
+  const months: string[] = [];
+  let byMonth: number[] = [];
   if (view === "graph") {
     const start = new Date(); start.setDate(1); start.setHours(0, 0, 0, 0); start.setMonth(start.getMonth() - 11);
     const rows = await ctx.db.salesOrder.findMany({ where: { AND: [where, { createdAt: { gte: start } }, { status: { not: "canceled" } }] }, select: { createdAt: true, total: true } });
