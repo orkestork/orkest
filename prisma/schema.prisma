@@ -1,0 +1,1339 @@
+// ORKEST — Enterprise Operating Platform
+// Regla de oro: toda entidad empresarial lleva `organizationId` y se consulta
+// únicamente a través del cliente con alcance de organización (lib/core/db.ts).
+
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ───────────────────────────── CORE: identidad y tenencia ─────────────────────────────
+
+model Organization {
+  id             String   @id @default(cuid())
+  slug           String   @unique
+  name           String
+  legalName      String?
+  taxId          String?
+  industry       String?
+  country        String   @default("CO")
+  currency       String   @default("COP")
+  timezone       String   @default("America/Bogota")
+  status         String   @default("ONBOARDING") // ONBOARDING | ACTIVE | SUSPENDED
+  /// { primaryColor, logoUrl, displayName }
+  branding       Json     @default("{}")
+  /// Configuración general (umbrales de Radar, numeraciones, etc.)
+  settings       Json     @default("{}")
+  templateKey    String?
+  onboardingStep Int      @default(1)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  memberships  Membership[]
+  roles        Role[]
+  modules      OrganizationModule[]
+  featureFlags OrganizationFeatureFlag[]
+  subscription Subscription?
+}
+
+model User {
+  id              String   @id @default(cuid())
+  email           String   @unique
+  name            String
+  passwordHash    String
+  /// Operador de OR-K con acceso a /platform. No otorga acceso a datos de clientes.
+  isPlatformAdmin Boolean  @default(false)
+  createdAt       DateTime @default(now())
+
+  memberships Membership[]
+}
+
+model Membership {
+  id             String   @id @default(cuid())
+  organizationId String
+  userId         String
+  roleId         String
+  title          String?
+  departmentId   String?
+  status         String   @default("ACTIVE") // ACTIVE | INVITED | DISABLED
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role         Role         @relation(fields: [roleId], references: [id])
+
+  @@unique([organizationId, userId])
+}
+
+model Role {
+  id             String   @id @default(cuid())
+  organizationId String
+  key            String
+  name           String
+  description    String?
+  /// Permisos con comodines: "*", "crm.*", "sales.quotes.approve"
+  permissions    String[]
+  isSystem       Boolean  @default(false)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  memberships  Membership[]
+
+  @@unique([organizationId, key])
+}
+
+model OrganizationModule {
+  id             String   @id @default(cuid())
+  organizationId String
+  moduleKey      String
+  enabled        Boolean  @default(true)
+  config         Json     @default("{}")
+  enabledAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, moduleKey])
+}
+
+// ───────────────────────────── PLATFORM: planes, flags, suscripciones ─────────────────────────────
+
+model Plan {
+  key          String   @id
+  name         String
+  priceMonthly Int      @default(0)
+  modules      String[]
+  /// { users, storageMb, apiCallsPerDay }
+  limits       Json     @default("{}")
+  active       Boolean  @default(true)
+
+  subscriptions Subscription[]
+}
+
+model Subscription {
+  id             String    @id @default(cuid())
+  organizationId String    @unique
+  planKey        String
+  status         String    @default("TRIAL") // TRIAL | ACTIVE | PAST_DUE | CANCELED
+  startedAt      DateTime  @default(now())
+  renewsAt       DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  plan         Plan         @relation(fields: [planKey], references: [key])
+}
+
+model FeatureFlag {
+  key            String  @id
+  description    String
+  defaultEnabled Boolean @default(false)
+
+  overrides OrganizationFeatureFlag[]
+}
+
+model OrganizationFeatureFlag {
+  id             String  @id @default(cuid())
+  organizationId String
+  flagKey        String
+  enabled        Boolean
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  flag         FeatureFlag  @relation(fields: [flagKey], references: [key], onDelete: Cascade)
+
+  @@unique([organizationId, flagKey])
+}
+
+model PlatformAuditLog {
+  id        String   @id @default(cuid())
+  actorId   String
+  action    String
+  targetOrg String?
+  details   Json     @default("{}")
+  createdAt DateTime @default(now())
+}
+
+// ───────────────────────────── CORE: servicios transversales ─────────────────────────────
+
+model AuditLog {
+  id             String   @id @default(cuid())
+  organizationId String
+  actorId        String?
+  action         String
+  entityType     String
+  entityId       String?
+  changes        Json     @default("{}")
+  createdAt      DateTime @default(now())
+
+  @@index([organizationId, entityType, entityId])
+}
+
+/// Outbox de eventos de dominio. Alimenta automatizaciones, Radar, webhooks y auditoría.
+model DomainEvent {
+  id             String    @id @default(cuid())
+  organizationId String
+  type           String
+  entityType     String
+  entityId       String
+  actorId        String?
+  payload        Json      @default("{}")
+  status         String    @default("PENDING") // PENDING | PROCESSED | FAILED
+  error          String?
+  createdAt      DateTime  @default(now())
+  processedAt    DateTime?
+
+  @@index([organizationId, type])
+  @@index([status, createdAt])
+}
+
+model Notification {
+  id             String    @id @default(cuid())
+  organizationId String
+  userId         String
+  title          String
+  body           String?
+  link           String?
+  readAt         DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@index([organizationId, userId, readAt])
+}
+
+model Activity {
+  id             String   @id @default(cuid())
+  organizationId String
+  entityType     String
+  entityId       String
+  type           String // NOTE | CALL | MEETING | EMAIL | SYSTEM
+  content        String
+  userId         String?
+  createdAt      DateTime @default(now())
+
+  @@index([organizationId, entityType, entityId])
+}
+
+model FileObject {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  mimeType       String
+  size           Int
+  storageKey     String
+  entityType     String?
+  entityId       String?
+  uploadedById   String?
+  createdAt      DateTime @default(now())
+}
+
+model Task {
+  id             String    @id @default(cuid())
+  organizationId String
+  title          String
+  description    String?
+  assigneeId     String?
+  dueDate        DateTime?
+  status         String    @default("OPEN") // OPEN | DONE | CANCELED
+  sourceType     String?
+  sourceId       String?
+  createdAt      DateTime  @default(now())
+}
+
+model Approval {
+  id              String    @id @default(cuid())
+  organizationId  String
+  entityType      String
+  entityId        String
+  reason          String
+  requiredRoleKey String
+  /// Estado al que pasa la entidad si se aprueba / rechaza
+  onApproveState  String?
+  onRejectState   String?
+  /// Transición cuyas acciones se ejecutan al aprobar
+  transitionId    String?
+  status          String    @default("PENDING") // PENDING | APPROVED | REJECTED
+  requestedById   String?
+  decidedById     String?
+  comment         String?
+  createdAt       DateTime  @default(now())
+  decidedAt       DateTime?
+
+  @@index([organizationId, status])
+}
+
+// ───────────────────────────── STUDIO: personalización por configuración ─────────────────────────────
+
+model CustomFieldDefinition {
+  id             String   @id @default(cuid())
+  organizationId String
+  entityType     String
+  key            String
+  label          String
+  /// text | textarea | number | currency | date | datetime | boolean | select | multiselect | user | relation | email | phone | url
+  type           String
+  /// select/multiselect: [{value,label}] · relation: { entityType }
+  options        Json     @default("[]")
+  /// { min, max, minLength, maxLength, pattern, patternMessage }
+  validation     Json     @default("{}")
+  required       Boolean  @default(false)
+  helpText       String?
+  position       Int      @default(0)
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  @@unique([organizationId, entityType, key])
+}
+
+model Workflow {
+  id             String  @id @default(cuid())
+  organizationId String
+  entityType     String
+  key            String
+  name           String
+  isDefault      Boolean @default(true)
+
+  states      WorkflowState[]
+  transitions WorkflowTransition[]
+
+  @@unique([organizationId, key])
+}
+
+model WorkflowState {
+  id         String  @id @default(cuid())
+  workflowId String
+  key        String
+  label      String
+  color      String  @default("slate")
+  isInitial  Boolean @default(false)
+  isFinal    Boolean @default(false)
+  position   Int     @default(0)
+
+  workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@unique([workflowId, key])
+}
+
+model WorkflowTransition {
+  id         String  @id @default(cuid())
+  workflowId String
+  fromKey    String
+  toKey      String
+  label      String
+  /// Permiso requerido para ejecutar la transición
+  permission String?
+  /// Condición (ConditionGroup) que debe cumplirse para permitirla
+  guard      Json?
+  /// { when: ConditionGroup, roleKey, pendingState } — si `when` se cumple, se exige aprobación
+  approval   Json?
+  /// Acciones adicionales al completar la transición (mismo formato que automatizaciones)
+  actions    Json    @default("[]")
+  position   Int     @default(0)
+
+  workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+}
+
+/// Reglas de negocio y automatizaciones: WHEN evento IF condiciones THEN acciones.
+model Automation {
+  id             String    @id @default(cuid())
+  organizationId String
+  name           String
+  description    String?
+  kind           String    @default("AUTOMATION") // RULE | AUTOMATION
+  trigger        String // tipo de evento: QuoteCreated, InventoryBelowMinimum…
+  conditions     Json      @default("{\"all\":[]}")
+  actions        Json      @default("[]")
+  enabled        Boolean   @default(true)
+  priority       Int       @default(100)
+  runCount       Int       @default(0)
+  lastRunAt      DateTime?
+  createdAt      DateTime  @default(now())
+
+  runs AutomationRun[]
+
+  @@index([organizationId, trigger, enabled])
+}
+
+model AutomationRun {
+  id             String   @id @default(cuid())
+  organizationId String
+  automationId   String
+  eventId        String
+  matched        Boolean
+  result         Json     @default("[]")
+  error          String?
+  createdAt      DateTime @default(now())
+
+  automation Automation @relation(fields: [automationId], references: [id], onDelete: Cascade)
+}
+
+model Dashboard {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  isDefault      Boolean  @default(false)
+  /// [{ type: "kpi"|"list"|"insights", metric, title, size }]
+  widgets        Json     @default("[]")
+  roleKeys       String[]
+}
+
+model SavedView {
+  id             String   @id @default(cuid())
+  organizationId String
+  entityType     String
+  name           String
+  columns        String[]
+  filters        Json     @default("{}")
+  isDefault      Boolean  @default(false)
+}
+
+model DocumentTemplate {
+  id             String   @id @default(cuid())
+  organizationId String
+  entityType     String
+  name           String
+  /// Plantilla con variables {{customer.name}}, {{total}}…
+  body           String
+  createdAt      DateTime @default(now())
+}
+
+// ───────────────────────────── API & INTEGRACIONES ─────────────────────────────
+
+model ApiKey {
+  id             String    @id @default(cuid())
+  organizationId String
+  name           String
+  prefix         String    @unique
+  keyHash        String
+  /// Permisos concedidos a la llave (subconjunto de los del creador)
+  scopes         String[]
+  createdById    String
+  lastUsedAt     DateTime?
+  revokedAt      DateTime?
+  createdAt      DateTime  @default(now())
+}
+
+model WebhookEndpoint {
+  id             String   @id @default(cuid())
+  organizationId String
+  url            String
+  description    String?
+  secret         String
+  /// "quote.created", "invoice.*", "*"
+  events         String[]
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  deliveries WebhookDelivery[]
+}
+
+model WebhookDelivery {
+  id             String    @id @default(cuid())
+  organizationId String
+  endpointId     String
+  eventId        String
+  eventName      String
+  /// Clave de idempotencia (eventId:endpointId) enviada en cabecera
+  idempotencyKey String    @unique
+  payload        Json
+  status         String    @default("PENDING") // PENDING | SUCCESS | FAILED | DEAD
+  attempts       Int       @default(0)
+  responseCode   Int?
+  lastError      String?
+  nextAttemptAt  DateTime  @default(now())
+  createdAt      DateTime  @default(now())
+  deliveredAt    DateTime?
+
+  endpoint WebhookEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+
+  @@index([status, nextAttemptAt])
+}
+
+model Integration {
+  id             String   @id @default(cuid())
+  organizationId String
+  provider       String
+  status         String   @default("DISCONNECTED")
+  config         Json     @default("{}")
+  createdAt      DateTime @default(now())
+
+  @@unique([organizationId, provider])
+}
+
+model ImportJob {
+  id             String   @id @default(cuid())
+  organizationId String
+  entityType     String
+  fileName       String
+  status         String   @default("UPLOADED") // UPLOADED | MAPPED | VALIDATED | IMPORTED | FAILED
+  headers        String[]
+  rows           Json     @default("[]")
+  /// { columnaArchivo: campoDestino }
+  mapping        Json     @default("{}")
+  totalRows      Int      @default(0)
+  validRows      Int      @default(0)
+  importedRows   Int      @default(0)
+  /// [{ row, field, message }]
+  errors         Json     @default("[]")
+  createdById    String
+  createdAt      DateTime @default(now())
+}
+
+// ───────────────────────────── APPS: CRM / Sales ─────────────────────────────
+
+model Customer {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  taxId          String?
+  email          String?
+  phone          String?
+  city           String?
+  ownerId        String?
+  status         String   @default("ACTIVE")
+  customFields   Json     @default("{}")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  pricelistId   String?
+  paymentTermId String?
+
+  contacts      Contact[]
+  opportunities Opportunity[]
+  quotes        Quote[]
+  invoices      Invoice[]
+  salesOrders   SalesOrder[]
+
+  @@index([organizationId, name])
+}
+
+model Contact {
+  id             String  @id @default(cuid())
+  organizationId String
+  customerId     String?
+  name           String
+  email          String?
+  phone          String?
+  position       String?
+  customFields   Json    @default("{}")
+
+  customer Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+}
+
+model Opportunity {
+  id             String    @id @default(cuid())
+  organizationId String
+  customerId     String?
+  title          String
+  amount         Decimal   @default(0) @db.Decimal(18, 2)
+  status         String    @default("new")
+  ownerId        String?
+  expectedClose  DateTime?
+  lastActivityAt DateTime  @default(now())
+  customFields   Json      @default("{}")
+  createdAt      DateTime  @default(now())
+
+  customer Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+}
+
+model Quote {
+  id             String    @id @default(cuid())
+  organizationId String
+  number         String
+  customerId     String
+  status         String    @default("draft")
+  currency       String    @default("COP")
+  subtotal       Decimal   @default(0) @db.Decimal(18, 2)
+  tax            Decimal   @default(0) @db.Decimal(18, 2)
+  total          Decimal   @default(0) @db.Decimal(18, 2)
+  ownerId        String?
+  notes          String?
+  /// Vigencia de la oferta
+  validUntil     DateTime?
+  paymentTermId  String?
+  pricelistId    String?
+  /// Términos y condiciones impresos en el documento
+  terms          String?
+  customFields   Json      @default("{}")
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  customer Customer    @relation(fields: [customerId], references: [id])
+  lines    QuoteLine[]
+
+  @@unique([organizationId, number])
+}
+
+model QuoteLine {
+  id          String  @id @default(cuid())
+  quoteId     String
+  /// PRODUCT | SECTION (título agrupador) | NOTE (texto libre)
+  kind        String  @default("PRODUCT")
+  position    Int     @default(0)
+  productId   String?
+  description String
+  quantity    Decimal @default(0) @db.Decimal(18, 3)
+  unitPrice   Decimal @default(0) @db.Decimal(18, 2)
+  discountPct Decimal @default(0) @db.Decimal(5, 2)
+  taxRate     Decimal @default(19) @db.Decimal(5, 2)
+  total       Decimal @default(0) @db.Decimal(18, 2)
+
+  quote Quote @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+}
+
+model Invoice {
+  id             String    @id @default(cuid())
+  organizationId String
+  number         String
+  customerId     String
+  quoteId        String?
+  salesOrderId   String?
+  /// OUT_INVOICE (factura) | OUT_REFUND (nota crédito)
+  type           String    @default("OUT_INVOICE")
+  refundOfId     String?
+  paymentTermId  String?
+  subtotal       Decimal   @default(0) @db.Decimal(18, 2)
+  tax            Decimal   @default(0) @db.Decimal(18, 2)
+  total          Decimal   @db.Decimal(18, 2)
+  balance        Decimal   @db.Decimal(18, 2)
+  issuedAt       DateTime  @default(now())
+  dueDate        DateTime
+  status         String    @default("issued") // draft | issued | paid | void
+  paidAt         DateTime?
+
+  customer Customer      @relation(fields: [customerId], references: [id])
+  lines    InvoiceLine[]
+
+  @@unique([organizationId, number])
+}
+
+// ───────────────────────────── APPS: Products / Inventory / Purchasing / Quality ─────────────────────────────
+
+model Product {
+  id                String   @id @default(cuid())
+  organizationId    String
+  sku               String
+  name              String
+  category          String?
+  unit              String   @default("UND")
+  price             Decimal  @default(0) @db.Decimal(18, 2)
+  cost              Decimal  @default(0) @db.Decimal(18, 2)
+  /// Total en ubicaciones internas (caché; la verdad está en StockQuant)
+  stock             Decimal  @default(0) @db.Decimal(18, 3)
+  minStock          Decimal  @default(0) @db.Decimal(18, 3)
+  /// GOODS (almacenable) | SERVICE | COMBO
+  kind              String   @default("GOODS")
+  /// ORDER (lo pedido) | DELIVERY (lo entregado)
+  invoicePolicy     String   @default("ORDER")
+  taxRate           Decimal  @default(19) @db.Decimal(5, 2)
+  canBeSold         Boolean  @default(true)
+  canBePurchased    Boolean  @default(true)
+  defaultSupplierId String?
+  active            Boolean  @default(true)
+  customFields      Json     @default("{}")
+  createdAt         DateTime @default(now())
+
+  movements StockMovement[]
+  quants    StockQuant[]
+
+  @@unique([organizationId, sku])
+}
+
+model StockMovement {
+  id             String   @id @default(cuid())
+  organizationId String
+  productId      String
+  type           String // IN | OUT | ADJUST | INTERNAL | PRODUCE | CONSUME
+  quantity       Decimal  @db.Decimal(18, 3)
+  fromLocationId String?
+  toLocationId   String?
+  transferId     String?
+  reference      String?
+  userId         String?
+  createdAt      DateTime @default(now())
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model Supplier {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  taxId          String?
+  email          String?
+  phone          String?
+  paymentTermId  String?
+  customFields   Json     @default("{}")
+  createdAt      DateTime @default(now())
+
+  nonconformities Nonconformity[]
+  purchaseOrders  PurchaseOrder[]
+  bills           Bill[]
+}
+
+model Nonconformity {
+  id             String   @id @default(cuid())
+  organizationId String
+  code           String
+  title          String
+  description    String?
+  supplierId     String?
+  productId      String?
+  severity       String   @default("MEDIUM")
+  status         String   @default("open")
+  createdAt      DateTime @default(now())
+
+  supplier Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+}
+
+model Employee {
+  id             String  @id @default(cuid())
+  organizationId String
+  userId         String?
+  name           String
+  email          String?
+  position       String?
+  departmentId   String?
+  customFields   Json    @default("{}")
+}
+
+// ───────────────────────────── KNOWLEDGE / SONAR / GRAPH ─────────────────────────────
+
+model OrgUnit {
+  id             String  @id @default(cuid())
+  organizationId String
+  kind           String // DEPARTMENT | SYSTEM
+  name           String
+  description    String?
+}
+
+model KnowledgeItem {
+  id             String    @id @default(cuid())
+  organizationId String
+  type           String // ARTICLE | PROCEDURE | PROCESS | POLICY | MANUAL
+  title          String
+  body           String    @default("")
+  status         String    @default("draft") // draft | in_review | published | archived
+  version        Int       @default(1)
+  ownerId        String?
+  approvedById   String?
+  approvedAt     DateTime?
+  criticality    String    @default("MEDIUM") // LOW | MEDIUM | HIGH | CRITICAL
+  departmentId   String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  versions KnowledgeVersion[]
+}
+
+model KnowledgeVersion {
+  id          String   @id @default(cuid())
+  itemId      String
+  version     Int
+  title       String
+  body        String
+  createdById String?
+  createdAt   DateTime @default(now())
+
+  item KnowledgeItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+}
+
+/// Grafo de conocimiento: relaciones tipadas entre cualquier par de entidades.
+/// Nodos: USER, KNOWLEDGE, PROCESS (KnowledgeItem tipo PROCESS), DEPARTMENT, SYSTEM, DOCUMENT…
+model GraphEdge {
+  id             String   @id @default(cuid())
+  organizationId String
+  fromType       String
+  fromId         String
+  relation       String // DEPENDS_ON | OWNS | KNOWS | BACKUP_FOR | USES | BELONGS_TO | DOCUMENTS
+  toType         String
+  toId           String
+  weight         Int      @default(1)
+  createdAt      DateTime @default(now())
+
+  @@unique([organizationId, fromType, fromId, relation, toType, toId])
+  @@index([organizationId, toType, toId])
+}
+
+model SonarSession {
+  id             String   @id @default(cuid())
+  organizationId String
+  title          String
+  area           String?
+  date           DateTime @default(now())
+  facilitatorId  String?
+  participants   String[]
+  summary        String?
+  status         String   @default("open") // open | closed
+  createdAt      DateTime @default(now())
+
+  items SonarItem[]
+}
+
+model SonarItem {
+  id             String   @id @default(cuid())
+  organizationId String
+  sessionId      String
+  /// FINDING | PROBLEM | OPPORTUNITY | DECISION | ACTION | PROCESS | KNOWLEDGE | RISK
+  kind           String
+  title          String
+  description    String?
+  ownerId        String?
+  status         String   @default("open")
+  /// Entidad estructurada generada a partir del hallazgo (KnowledgeItem, Task, Insight…)
+  linkedType     String?
+  linkedId       String?
+  createdAt      DateTime @default(now())
+
+  session SonarSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+}
+
+// ───────────────────────────── RADAR ─────────────────────────────
+
+model Insight {
+  id                String    @id @default(cuid())
+  organizationId    String
+  detectorKey       String
+  /// RISK | OPPORTUNITY | EXCEPTION | DELAY | ANOMALY | PENDING_ACTION
+  kind              String
+  severity          String // LOW | MEDIUM | HIGH | CRITICAL
+  title             String
+  detail            String?
+  entityType        String?
+  entityId          String?
+  recommendedAction String?
+  responsibleUserId String?
+  /// Clave estable para no duplicar el mismo hallazgo
+  fingerprint       String
+  status            String    @default("OPEN") // OPEN | ACKNOWLEDGED | RESOLVED
+  detectedAt        DateTime  @default(now())
+  resolvedAt        DateTime?
+
+  @@unique([organizationId, fingerprint])
+  @@index([organizationId, status])
+}
+
+// ═════════════════════════════ FASE 1 · INVENTARIO MULTIALMACÉN ═════════════════════════════
+
+model Warehouse {
+  id              String  @id @default(cuid())
+  organizationId  String
+  code            String
+  name            String
+  active          Boolean @default(true)
+  /// Ubicación principal de existencias
+  stockLocationId String?
+  position        Int     @default(0)
+
+  locations      Location[]
+  operationTypes OperationType[]
+
+  @@unique([organizationId, code])
+}
+
+model Location {
+  id             String  @id @default(cuid())
+  organizationId String
+  warehouseId    String?
+  name           String
+  /// INTERNAL | SUPPLIER | CUSTOMER | PRODUCTION | ADJUSTMENT | TRANSIT
+  kind           String
+  active         Boolean @default(true)
+
+  warehouse Warehouse?   @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  quants    StockQuant[]
+}
+
+model StockQuant {
+  id             String  @id @default(cuid())
+  organizationId String
+  productId      String
+  locationId     String
+  quantity       Decimal @default(0) @db.Decimal(18, 3)
+
+  product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, locationId])
+  @@index([organizationId, locationId])
+}
+
+model OperationType {
+  id             String  @id @default(cuid())
+  organizationId String
+  warehouseId    String
+  /// RECEIPT | INTERNAL | DELIVERY | MANUFACTURING
+  kind           String
+  name           String
+  prefix         String
+  defaultSrcId   String?
+  defaultDestId  String?
+
+  warehouse Warehouse  @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  transfers Transfer[]
+}
+
+model Transfer {
+  id              String    @id @default(cuid())
+  organizationId  String
+  number          String
+  operationTypeId String
+  srcLocationId   String
+  destLocationId  String
+  /// draft | waiting | ready | done | canceled
+  status          String    @default("draft")
+  origin          String?
+  /// Documento que la originó: purchase_order | sales_order | production | replenishment | adjustment
+  sourceType      String?
+  sourceId        String?
+  partnerName     String?
+  scheduledAt     DateTime  @default(now())
+  doneAt          DateTime?
+  createdAt       DateTime  @default(now())
+
+  operationType OperationType  @relation(fields: [operationTypeId], references: [id])
+  lines         TransferLine[]
+
+  @@unique([organizationId, number])
+  @@index([organizationId, sourceType, sourceId])
+}
+
+model TransferLine {
+  id           String  @id @default(cuid())
+  transferId   String
+  productId    String
+  description  String?
+  quantity     Decimal @db.Decimal(18, 3)
+  doneQty      Decimal @default(0) @db.Decimal(18, 3)
+  /// Línea del documento origen (p.ej. PurchaseOrderLine.id)
+  sourceLineId String?
+
+  transfer Transfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
+}
+
+/// Reglas de reabastecimiento (mín/máx) — equivalen a orderpoints + rutas
+model ReorderRule {
+  id               String    @id @default(cuid())
+  organizationId   String
+  productId        String
+  locationId       String
+  minQty           Decimal   @db.Decimal(18, 3)
+  maxQty           Decimal   @db.Decimal(18, 3)
+  multiple         Decimal   @default(1) @db.Decimal(18, 3)
+  /// AUTO | MANUAL
+  trigger          String    @default("AUTO")
+  /// BUY | MANUFACTURE | TRANSFER
+  action           String    @default("BUY")
+  /// Para TRANSFER: ubicación de origen (otra bodega)
+  sourceLocationId String?
+  supplierId       String?
+  active           Boolean   @default(true)
+  lastRunAt        DateTime?
+
+  @@unique([productId, locationId])
+}
+
+// ═════════════════════════════ FASE 1 · COMPRAS ═════════════════════════════
+
+model Requisition {
+  id                String    @id @default(cuid())
+  organizationId    String
+  number            String
+  requesterId       String
+  area              String?
+  /// draft | submitted | approved | ordered | received | rejected | canceled
+  status            String    @default("draft")
+  neededBy          DateTime?
+  suggestedSupplier String?
+  warehouseId       String?
+  notes             String?
+  customFields      Json      @default("{}")
+  createdAt         DateTime  @default(now())
+
+  lines RequisitionLine[]
+
+  @@unique([organizationId, number])
+}
+
+model RequisitionLine {
+  id            String  @id @default(cuid())
+  requisitionId String
+  productId     String?
+  description   String
+  quantity      Decimal @db.Decimal(18, 3)
+
+  requisition Requisition @relation(fields: [requisitionId], references: [id], onDelete: Cascade)
+}
+
+model PurchaseOrder {
+  id             String    @id @default(cuid())
+  organizationId String
+  number         String
+  supplierId     String
+  warehouseId    String
+  requisitionId  String?
+  origin         String?
+  /// draft (RFQ) | sent | to_approve | purchase | received | canceled
+  status         String    @default("draft")
+  /// none | partial | full
+  receiptStatus  String    @default("none")
+  /// none | partial | billed
+  billStatus     String    @default("none")
+  currency       String    @default("COP")
+  subtotal       Decimal   @default(0) @db.Decimal(18, 2)
+  tax            Decimal   @default(0) @db.Decimal(18, 2)
+  total          Decimal   @default(0) @db.Decimal(18, 2)
+  expectedAt     DateTime?
+  confirmedAt    DateTime?
+  ownerId        String?
+  notes          String?
+  customFields   Json      @default("{}")
+  createdAt      DateTime  @default(now())
+
+  supplier Supplier            @relation(fields: [supplierId], references: [id])
+  lines    PurchaseOrderLine[]
+
+  @@unique([organizationId, number])
+}
+
+model PurchaseOrderLine {
+  id              String  @id @default(cuid())
+  purchaseOrderId String
+  productId       String?
+  description     String
+  quantity        Decimal @db.Decimal(18, 3)
+  unitPrice       Decimal @db.Decimal(18, 2)
+  taxRate         Decimal @default(19) @db.Decimal(5, 2)
+  total           Decimal @db.Decimal(18, 2)
+  receivedQty     Decimal @default(0) @db.Decimal(18, 3)
+  billedQty       Decimal @default(0) @db.Decimal(18, 3)
+
+  order PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+}
+
+// ═════════════════════════════ FASE 2 · MANUFACTURA ═════════════════════════════
+
+model WorkCenter {
+  id             String  @id @default(cuid())
+  organizationId String
+  code           String
+  name           String
+  costPerHour    Decimal @default(0) @db.Decimal(18, 2)
+  /// Unidades en paralelo
+  capacity       Int     @default(1)
+  active         Boolean @default(true)
+}
+
+model Bom {
+  id             String  @id @default(cuid())
+  organizationId String
+  productId      String
+  code           String?
+  /// NORMAL (fabricar) | KIT (se explota al entregar)
+  type           String  @default("NORMAL")
+  /// Cantidad que produce esta lista
+  quantity       Decimal @default(1) @db.Decimal(18, 3)
+  active         Boolean @default(true)
+
+  lines      BomLine[]
+  operations BomOperation[]
+}
+
+model BomLine {
+  id          String  @id @default(cuid())
+  bomId       String
+  componentId String
+  quantity    Decimal @db.Decimal(18, 4)
+
+  bom Bom @relation(fields: [bomId], references: [id], onDelete: Cascade)
+}
+
+model BomOperation {
+  id              String @id @default(cuid())
+  bomId           String
+  workCenterId    String
+  name            String
+  durationMinutes Int    @default(60)
+  position        Int    @default(0)
+
+  bom Bom @relation(fields: [bomId], references: [id], onDelete: Cascade)
+}
+
+model ProductionOrder {
+  id             String    @id @default(cuid())
+  organizationId String
+  number         String
+  productId      String
+  bomId          String?
+  quantity       Decimal   @db.Decimal(18, 3)
+  producedQty    Decimal   @default(0) @db.Decimal(18, 3)
+  /// draft | confirmed | in_progress | done | canceled
+  status         String    @default("draft")
+  warehouseId    String
+  srcLocationId  String
+  destLocationId String
+  origin         String?
+  scheduledAt    DateTime  @default(now())
+  startedAt      DateTime?
+  doneAt         DateTime?
+  ownerId        String?
+  customFields   Json      @default("{}")
+  createdAt      DateTime  @default(now())
+
+  components ProductionComponent[]
+  workOrders WorkOrder[]
+
+  @@unique([organizationId, number])
+}
+
+model ProductionComponent {
+  id           String  @id @default(cuid())
+  productionId String
+  productId    String
+  required     Decimal @db.Decimal(18, 3)
+  consumed     Decimal @default(0) @db.Decimal(18, 3)
+
+  production ProductionOrder @relation(fields: [productionId], references: [id], onDelete: Cascade)
+}
+
+model WorkOrder {
+  id              String    @id @default(cuid())
+  productionId    String
+  workCenterId    String
+  name            String
+  /// pending | in_progress | done
+  status          String    @default("pending")
+  expectedMinutes Int       @default(60)
+  realMinutes     Int       @default(0)
+  startedAt       DateTime?
+  doneAt          DateTime?
+  position        Int       @default(0)
+
+  production ProductionOrder @relation(fields: [productionId], references: [id], onDelete: Cascade)
+}
+
+// ═════════════════════════════ FASE 3 · VENTAS Y FACTURACIÓN ═════════════════════════════
+
+model PaymentTerm {
+  id             String  @id @default(cuid())
+  organizationId String
+  name           String
+  /// [{ percent, days }]  — p.ej. 30% hoy, saldo a 60 días
+  lines          Json    @default("[{\"percent\":100,\"days\":0}]")
+  isDefault      Boolean @default(false)
+}
+
+model Pricelist {
+  id             String  @id @default(cuid())
+  organizationId String
+  name           String
+  currency       String  @default("COP")
+  isDefault      Boolean @default(false)
+
+  items PricelistItem[]
+}
+
+model PricelistItem {
+  id          String   @id @default(cuid())
+  pricelistId String
+  /// null = aplica a todos los productos (o a la categoría)
+  productId   String?
+  category    String?
+  minQty      Decimal  @default(0) @db.Decimal(18, 3)
+  fixedPrice  Decimal? @db.Decimal(18, 2)
+  discountPct Decimal? @db.Decimal(5, 2)
+
+  pricelist Pricelist @relation(fields: [pricelistId], references: [id], onDelete: Cascade)
+}
+
+model SalesOrder {
+  id             String    @id @default(cuid())
+  organizationId String
+  number         String
+  customerId     String
+  quoteId        String?
+  warehouseId    String
+  pricelistId    String?
+  paymentTermId  String?
+  /// confirmed | done | canceled
+  status         String    @default("confirmed")
+  /// none | partial | full
+  deliveryStatus String    @default("none")
+  /// none | to_invoice | partial | invoiced
+  invoiceStatus  String    @default("none")
+  currency       String    @default("COP")
+  subtotal       Decimal   @default(0) @db.Decimal(18, 2)
+  tax            Decimal   @default(0) @db.Decimal(18, 2)
+  total          Decimal   @default(0) @db.Decimal(18, 2)
+  commitmentAt   DateTime?
+  ownerId        String?
+  customFields   Json      @default("{}")
+  createdAt      DateTime  @default(now())
+
+  customer Customer         @relation(fields: [customerId], references: [id])
+  lines    SalesOrderLine[]
+
+  @@unique([organizationId, number])
+}
+
+model SalesOrderLine {
+  id           String  @id @default(cuid())
+  salesOrderId String
+  productId    String?
+  description  String
+  quantity     Decimal @db.Decimal(18, 3)
+  unitPrice    Decimal @db.Decimal(18, 2)
+  discountPct  Decimal @default(0) @db.Decimal(5, 2)
+  taxRate      Decimal @default(19) @db.Decimal(5, 2)
+  total        Decimal @db.Decimal(18, 2)
+  deliveredQty Decimal @default(0) @db.Decimal(18, 3)
+  invoicedQty  Decimal @default(0) @db.Decimal(18, 3)
+
+  order SalesOrder @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
+}
+
+model InvoiceLine {
+  id               String  @id @default(cuid())
+  invoiceId        String
+  productId        String?
+  salesOrderLineId String?
+  description      String
+  quantity         Decimal @db.Decimal(18, 3)
+  unitPrice        Decimal @db.Decimal(18, 2)
+  taxRate          Decimal @default(19) @db.Decimal(5, 2)
+  subtotal         Decimal @db.Decimal(18, 2)
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+}
+
+/// Facturas de proveedor
+model Bill {
+  id              String    @id @default(cuid())
+  organizationId  String
+  number          String
+  supplierRef     String?
+  supplierId      String
+  purchaseOrderId String?
+  subtotal        Decimal   @default(0) @db.Decimal(18, 2)
+  tax             Decimal   @default(0) @db.Decimal(18, 2)
+  total           Decimal   @db.Decimal(18, 2)
+  balance         Decimal   @db.Decimal(18, 2)
+  issuedAt        DateTime  @default(now())
+  dueDate         DateTime
+  /// posted | paid | void
+  status          String    @default("posted")
+  paidAt          DateTime?
+
+  supplier Supplier   @relation(fields: [supplierId], references: [id])
+  lines    BillLine[]
+
+  @@unique([organizationId, number])
+}
+
+model BillLine {
+  id                  String  @id @default(cuid())
+  billId              String
+  productId           String?
+  purchaseOrderLineId String?
+  description         String
+  quantity            Decimal @db.Decimal(18, 3)
+  unitPrice           Decimal @db.Decimal(18, 2)
+  taxRate             Decimal @default(19) @db.Decimal(5, 2)
+  subtotal            Decimal @db.Decimal(18, 2)
+
+  bill Bill @relation(fields: [billId], references: [id], onDelete: Cascade)
+}
+
+model Journal {
+  id             String  @id @default(cuid())
+  organizationId String
+  code           String
+  name           String
+  /// SALE | PURCHASE | BANK | CASH | GENERAL
+  type           String
+  active         Boolean @default(true)
+
+  @@unique([organizationId, code])
+}
+
+model Tax {
+  id             String  @id @default(cuid())
+  organizationId String
+  name           String
+  rate           Decimal @db.Decimal(5, 2)
+  /// SALE | PURCHASE
+  scope          String
+  active         Boolean @default(true)
+}
+
+model Payment {
+  id             String   @id @default(cuid())
+  organizationId String
+  number         String
+  /// INBOUND (cobro) | OUTBOUND (pago a proveedor)
+  direction      String
+  journalId      String
+  invoiceId      String?
+  billId         String?
+  partnerName    String
+  amount         Decimal  @db.Decimal(18, 2)
+  date           DateTime @default(now())
+  reference      String?
+  createdById    String?
+
+  @@unique([organizationId, number])
+}
+
+// ═════════════════════════════ FASE 4 · STUDIO: OBJETOS PERSONALIZADOS ═════════════════════════════
+
+model CustomEntity {
+  id             String   @id @default(cuid())
+  organizationId String
+  /// Clave técnica: entityType = "x:<key>"
+  key            String
+  label          String
+  labelPlural    String
+  icon           String   @default("studio")
+  prefix         String
+  hasLines       Boolean  @default(false)
+  /// Campo que actúa como título del registro (clave de un campo personalizado)
+  titleField     String?
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  @@unique([organizationId, key])
+}
+
+model CustomRecord {
+  id             String   @id @default(cuid())
+  organizationId String
+  entityKey      String
+  number         String
+  status         String   @default("draft")
+  data           Json     @default("{}")
+  ownerId        String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  lines CustomRecordLine[]
+
+  @@unique([organizationId, entityKey, number])
+  @@index([organizationId, entityKey])
+}
+
+model CustomRecordLine {
+  id       String @id @default(cuid())
+  recordId String
+  data     Json   @default("{}")
+  position Int    @default(0)
+
+  record CustomRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
+}
+
+/// Consecutivos por organización (OC-00001, REC-00001…) — incremento atómico
+model Sequence {
+  id             String @id @default(cuid())
+  organizationId String
+  key            String
+  value          Int    @default(0)
+
+  @@unique([organizationId, key])
+}

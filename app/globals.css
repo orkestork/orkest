@@ -1,26 +1,69 @@
 @import "tailwindcss";
 
+/* Identidad OR-K (or-k.co): papel editorial, tinta, púrpura/violeta y magenta */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --ork-paper: #eee7dc;
+  --ork-paper-light: #f7f1e7;
+  --ork-ink: #11100f;
+  --ork-pink: #e31572;
+  --ork-purple: #32125e;
+  --ork-violet: #6f35b5;
+  --ork-lavender: #bda5ff;
+  --ork-acid: #b6ff5c;
+  --ork-rule: rgba(17, 16, 15, 0.14);
+  /* Acento de acciones: marca OR-K. El color de cada organización vive en --org. */
+  --brand: var(--ork-purple);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --font-sans: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-anton), Impact, sans-serif;
+  --font-serif: var(--font-instrument), Georgia, serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  /* Grises cálidos para armonizar con el papel */
+  --color-slate-50: #faf8f5;
+  --color-slate-100: #f2eee8;
+  --color-slate-200: #e4ded5;
+  --color-slate-300: #d0c8bc;
+  --color-slate-400: #a39a8e;
+  --color-slate-500: #7a7166;
+  --color-slate-600: #5c544b;
+  --color-slate-700: #453f38;
+  --color-slate-800: #2b2723;
+  --color-slate-900: #17151a;
+  --color-slate-950: #0e0c10;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--ork-paper-light);
+  color: var(--ork-ink);
+  font-family: var(--font-sans);
 }
+
+/* Fondo del área de trabajo: papel cálido con orbes difusos (como or-k.co) */
+.ork-canvas {
+  background:
+    radial-gradient(60rem 40rem at 105% -10%, rgba(189, 165, 255, 0.38), transparent 60%),
+    radial-gradient(40rem 30rem at -10% 110%, rgba(227, 21, 114, 0.07), transparent 60%),
+    radial-gradient(30rem 20rem at 70% 100%, rgba(255, 181, 71, 0.08), transparent 60%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.07 0 0 0 0 0.06 0 0 0 0 0.06 0 0 0 .06 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
+    var(--ork-paper-light);
+  background-attachment: fixed;
+}
+
+/* Tarjeta de app del lanzador */
+.app-tile {
+  background: #fff;
+  border-radius: 24px;
+  box-shadow: 0 1px 2px rgba(17, 16, 15, 0.06), 0 10px 24px -12px rgba(50, 18, 94, 0.28);
+  transition: transform 0.25s cubic-bezier(.2,.8,.2,1), box-shadow 0.25s;
+}
+.app-tile svg { transition: transform 0.35s cubic-bezier(.2,.8,.2,1); }
+a:hover > .app-tile, a:focus-visible > .app-tile {
+  transform: translateY(-4px);
+  box-shadow: 0 2px 4px rgba(17, 16, 15, 0.06), 0 18px 34px -12px rgba(50, 18, 94, 0.4);
+}
+a:hover > .app-tile svg { transform: scale(1.06) rotate(-3deg); }
+
+::selection { background: var(--ork-lavender); color: var(--ork-ink); }

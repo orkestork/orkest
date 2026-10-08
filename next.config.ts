@@ -1,9 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
-  cacheComponents: true,
-  partialPrefetching: true,
+  // ORKEST es 100% dinámica por request (sesión + organización activa): sin prerender de rutas.
+  cacheComponents: false,
   turbopack: {
     rules: {
       "*.css": {

@@ -1,0 +1,76 @@
+import "dotenv/config";
+import { prisma } from "@/lib/core/prisma";
+import { tenantDb } from "@/lib/core/db";
+import type { ExecContext, OrgContext } from "@/lib/core/context";
+import { ensureBaseRoles, applyTemplate } from "@/lib/templates/apply";
+import { validateTransfer } from "@/lib/apps/stock";
+import { createProduct } from "@/lib/apps/inventory";
+import { createQuote } from "@/lib/apps/sales";
+import { priceFor } from "@/lib/apps/sales-orders";
+import { billFromPurchaseOrder, creditNote, invoiceFromSalesOrder, registerPayment } from "@/lib/apps/invoicing";
+import { createPurchaseOrder } from "@/lib/apps/purchasing";
+import { executeTransition, getWorkflow } from "@/lib/core/workflow";
+
+async function main() {
+  await prisma.organization.deleteMany({ where: { slug: "test-f3" } });
+  const o = await prisma.organization.create({ data: { slug: "test-f3", name: "Test F3", status: "ACTIVE" } });
+  const u = await prisma.user.upsert({ where: { email: "test-f1@x.co" }, update: {}, create: { email: "test-f1@x.co", name: "Tester", passwordHash: "x" } });
+  const base: ExecContext = { orgId: o.id, db: tenantDb(o.id), actorId: u.id };
+  await ensureBaseRoles(base);
+  const ctx = { ...base, user: { ...u, isPlatformAdmin: false }, role: { id: "x", key: "OWNER", name: "x" }, can: () => true, hasModule: () => true } as unknown as OrgContext;
+  await applyTemplate(ctx, "manufacturing");
+  const term30 = await ctx.db.paymentTerm.findFirstOrThrow({ where: { name: "30 días" } });
+  const pl = await ctx.db.pricelist.create({ data: { organizationId: o.id, name: "Mayoristas", items: { create: [{ discountPct: 10 }] } } });
+  const cust = await ctx.db.customer.create({ data: { organizationId: o.id, name: "Cliente SA", pricelistId: pl.id, paymentTermId: term30.id } });
+  const val = await createProduct(ctx, { sku: "VAL", name: "Válvula", price: 1000000, cost: 500000, stock: 3, invoicePolicy: "DELIVERY" });
+  const srv = await createProduct(ctx, { sku: "SRV", name: "Instalación", price: 2000000, kind: "SERVICE" });
+  console.log("1. precio con lista mayorista:", await priceFor(ctx, pl.id, val.id, 1));
+  const q = await createQuote(ctx, { customerId: cust.id, taxRate: 19, lines: [{ productId: val.id, description: "Válvula", quantity: 5, unitPrice: 900000 }, { productId: srv.id, description: "Instalación", quantity: 1, unitPrice: 2000000 }] });
+  const wfQ = await getWorkflow(ctx.db, "quote");
+  const t = (from: string, to: string) => wfQ!.transitions.find((x) => x.fromKey === from && x.toKey === to)!.id;
+  await executeTransition(ctx, "quote", q.id, t("draft", "sent"));
+  await executeTransition(ctx, "quote", q.id, t("sent", "approved"));
+  await executeTransition(ctx, "quote", q.id, t("approved", "converted"));
+  const so = await ctx.db.salesOrder.findFirstOrThrow({ where: { quoteId: q.id } });
+  console.log("2. cotización → pedido", so.number, "| entrega", so.deliveryStatus, "| factura", so.invoiceStatus);
+  const inv1 = await invoiceFromSalesOrder(ctx, so.id);
+  const inv1l = await ctx.db.invoiceLine.findMany({ where: { invoiceId: inv1.id } });
+  console.log("3. 1ª factura (solo servicio, válvula factura por entrega):", inv1.number, inv1l.map((l) => `${l.description}×${Number(l.quantity)}`), "vence en", Math.round((inv1.dueDate.getTime() - Date.now()) / 86400000), "días");
+  const del = await ctx.db.transfer.findFirstOrThrow({ where: { sourceType: "sales_order", sourceId: so.id } });
+  console.log("4. entrega", del.number, del.status, "(hay 3, pedido 5)");
+  const line = await ctx.db.transferLine.findFirstOrThrow({ where: { transferId: del.id } });
+  const r = await validateTransfer(ctx, del.id, { [line.id]: 3 });
+  const so2 = await ctx.db.salesOrder.findUniqueOrThrow({ where: { id: so.id } });
+  console.log("5. entregadas 3 → entrega", so2.deliveryStatus, "| factura", so2.invoiceStatus, "| backorder", !!r.backorderId);
+  const inv2 = await invoiceFromSalesOrder(ctx, so.id);
+  console.log("6. 2ª factura (3 válvulas entregadas):", inv2.number, Number(inv2.total));
+  await registerPayment(ctx, { invoiceId: inv2.id, amount: 1000000 });
+  const nc = await creditNote(ctx, inv2.id, 500000, "Descuento");
+  const inv2b = await ctx.db.invoice.findUniqueOrThrow({ where: { id: inv2.id } });
+  console.log("7. abono 1M + nota crédito", nc.number, "→ saldo", Number(inv2b.balance), inv2b.status);
+  await registerPayment(ctx, { invoiceId: inv2.id, amount: 99999999 });
+  console.log("8. pago del saldo → ", (await ctx.db.invoice.findUniqueOrThrow({ where: { id: inv2.id } })).status);
+  // Compras → factura proveedor
+  const sup = await ctx.db.supplier.create({ data: { organizationId: o.id, name: "Prov" } });
+  const wh = await ctx.db.warehouse.findFirstOrThrow();
+  const po = await createPurchaseOrder(ctx, { supplierId: sup.id, warehouseId: wh.id, lines: [{ productId: val.id, description: "Válvula", quantity: 4, unitPrice: 400000 }] });
+  const wfP = await getWorkflow(ctx.db, "purchase_order");
+  await executeTransition(ctx, "purchase_order", po.id, wfP!.transitions.find((x) => x.fromKey === "draft" && x.toKey === "purchase")!.id);
+  try { await billFromPurchaseOrder(ctx, po.id); } catch (e) { console.log("9. factura sin recibir bloqueada:", (e as Error).message); }
+  const rec = await ctx.db.transfer.findFirstOrThrow({ where: { sourceType: "purchase_order", sourceId: po.id } });
+  const rl = await ctx.db.transferLine.findFirstOrThrow({ where: { transferId: rec.id } });
+  await validateTransfer(ctx, rec.id, { [rl.id]: 2 });
+  const bill = await billFromPurchaseOrder(ctx, po.id, "FAC-778");
+  console.log("10. recibidas 2 → factura proveedor", bill.number, Number(bill.total), "| OC", (await ctx.db.purchaseOrder.findUniqueOrThrow({ where: { id: po.id } })).billStatus);
+  await registerPayment(ctx, { billId: bill.id, amount: Number(bill.total) });
+  console.log("11. pagada:", (await ctx.db.bill.findUniqueOrThrow({ where: { id: bill.id } })).status, "| pagos:", await ctx.db.payment.count());
+  // el backorder de la entrega ahora puede salir con lo recibido
+  const bo = await ctx.db.transfer.findUniqueOrThrow({ where: { id: r.backorderId! } });
+  console.log("12. backorder de entrega tras recibir compra:", bo.status);
+  await validateTransfer(ctx, bo.id);
+  await invoiceFromSalesOrder(ctx, so.id);
+  console.log("13. pedido completo:", (await ctx.db.salesOrder.findUniqueOrThrow({ where: { id: so.id } })).status);
+  console.log("14. eventos:", await ctx.db.domainEvent.groupBy({ by: ["status"], _count: true }));
+  await prisma.organization.delete({ where: { id: o.id } });
+}
+main().catch((e) => { console.error(e); process.exit(1); }).finally(() => prisma.$disconnect());
