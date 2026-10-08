@@ -28,6 +28,7 @@
     "import:odoo:salespeople:supabase": "tsx --env-file=.env.supabase --env-file=.env.odoo scripts/odoo/salespeople.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.132.1",
     "@prisma/adapter-pg": "^7.10.0",
     "@prisma/client": "^7.10.0",
     "bcryptjs": "^3.0.3",
