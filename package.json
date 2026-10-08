@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "dev:supabase": "node --env-file=.env.supabase node_modules/next/dist/bin/next dev",
+    "dev:supabase": "set -a && . ./.env.supabase && set +a && next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -19,7 +19,9 @@
     "postinstall": "prisma generate",
     "test:flows": "tsx scripts/test-phase1.ts && tsx scripts/test-phase2.ts && tsx scripts/test-phase3.ts && tsx scripts/test-warehouses.ts && tsx scripts/test-inventory-audit.ts",
     "check:seed": "tsx scripts/check-seed.ts",
-    "test:crawl": "DB_POOL_MAX=1 tsx scripts/crawl.ts"
+    "test:crawl": "DB_POOL_MAX=1 tsx scripts/crawl.ts",
+    "import:odoo": "tsx --env-file=.env --env-file=.env.odoo scripts/odoo/import.ts",
+    "import:odoo:supabase": "tsx --env-file=.env.supabase --env-file=.env.odoo scripts/odoo/import.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.0",
