@@ -6,7 +6,7 @@ import { plain } from "@/lib/core/entities";
 import { availableTransitions, getWorkflow } from "@/lib/core/workflow";
 import { orgUsers } from "@/lib/core/members";
 import { ActionForm, SubmitButton } from "@/components/action-form";
-import { CustomFieldValues } from "@/components/custom-fields";
+import { CustomFieldInputs, CustomFieldValues } from "@/components/custom-fields";
 import { RecordTopBar, StatusChevrons, type SmartButton } from "@/components/record/top-bar";
 import { Chatter } from "@/components/record/chatter";
 import { Tabs } from "@/components/record/tabs";
@@ -25,13 +25,12 @@ export default async function QuoteDetail({ params }: PageProps<"/sales/quotes/[
   const q = await ctx.db.quote.findUnique({ where: { id }, include: { customer: true, lines: { orderBy: { position: "asc" } } } });
   if (!q) notFound();
 
-  const [wf, { transitions }, users, defs, approvals, so, order, products, customers, terms, pricelists] = await Promise.all([
+  const [wf, { transitions }, users, defs, approvals, so, order, products, terms, pricelists] = await Promise.all([
     getWorkflow(ctx.db, "quote"), availableTransitions(ctx, "quote", plain(q)), orgUsers(ctx), getFieldDefs(ctx.db, "quote"),
     ctx.db.approval.findMany({ where: { entityType: "quote", entityId: id }, orderBy: { createdAt: "desc" } }),
     ctx.db.salesOrder.findFirst({ where: { quoteId: id }, include: { lines: true } }),
     ctx.db.quote.findMany({ select: { id: true }, orderBy: { createdAt: "desc" } }),
     ctx.db.product.findMany({ where: { active: true, canBeSold: true }, orderBy: { name: "asc" } }),
-    ctx.db.customer.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } }),
     ctx.db.paymentTerm.findMany({ select: { id: true, name: true } }),
     ctx.db.pricelist.findMany({ select: { id: true, name: true } }),
   ]);
@@ -95,7 +94,8 @@ export default async function QuoteDetail({ params }: PageProps<"/sales/quotes/[
       initial={{ id: q.id, customerId: q.customerId, validUntil: iso(q.validUntil), paymentTermId: q.paymentTermId ?? "", pricelistId: q.pricelistId ?? "", terms: q.terms ?? "", notes: q.notes ?? "",
         lines: q.lines.map((l): EditorLine => ({ kind: l.kind as EditorLine["kind"], productId: l.productId ?? "", description: l.description, quantity: n(l.quantity), unitPrice: n(l.unitPrice), discountPct: n(l.discountPct), taxRate: n(l.taxRate) })) }}
       products={products.map((p) => ({ id: p.id, sku: p.sku, name: p.name, price: n(p.price), cost: n(p.cost), taxRate: n(p.taxRate), unit: p.unit }))}
-      customers={customers} terms={terms} pricelists={pricelists} />
+      extra={defs.length > 0 && <CustomFieldInputs defs={defs} values={q.customFields as Record<string, unknown>} legend="Despacho y facturación" wide />}
+      customer={{ id: q.customer.id, name: q.customer.name }} canCreateCustomer={ctx.can("crm.customers.write")} terms={terms} pricelists={pricelists} />
   );
 
   return (

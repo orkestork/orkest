@@ -5,40 +5,57 @@ import { plain } from "@/lib/core/entities";
 import { WorkflowBar } from "@/components/workflow-bar";
 import { ActivityTimeline } from "@/components/activity";
 import { ActionForm, SubmitButton } from "@/components/action-form";
-import { Badge, btn, Card, PageHeader, Table, td } from "@/components/ui";
+import { Badge, btn, Card, input, PageHeader, Table, td } from "@/components/ui";
 import { date, money, num } from "@/lib/ui/format";
 import { TRANSFER_STATUS } from "@/lib/ui/stock-labels";
 import { DELIVERY_STATUS, INVOICE_STATUS } from "@/lib/ui/sales-labels";
 import { saveSalesOrderFields, soAction } from "../../order-actions";
 import { CustomFieldInputs, CustomFieldValues } from "@/components/custom-fields";
 import { getFieldDefs } from "@/lib/core/custom-fields";
+import { orgPeople } from "@/lib/core/members";
 
 export default async function SalesOrderDetail({ params }: PageProps<"/sales/orders/[id]">) {
   const ctx = await requireModule("sales", "sales.quotes.read");
   const { id } = await params;
   const so = await ctx.db.salesOrder.findUnique({ where: { id }, include: { customer: true, lines: true } });
   if (!so) notFound();
-  const [deliveries, invoices, term, pricelist, quote, defs] = await Promise.all([
+  const [deliveries, invoices, term, pricelist, quote, defs, people] = await Promise.all([
     ctx.db.transfer.findMany({ where: { sourceType: "sales_order", sourceId: so.id }, orderBy: { createdAt: "asc" } }),
     ctx.hasModule("invoicing") ? ctx.db.invoice.findMany({ where: { salesOrderId: so.id }, orderBy: { issuedAt: "asc" } }) : [],
     so.paymentTermId ? ctx.db.paymentTerm.findUnique({ where: { id: so.paymentTermId } }) : null,
     so.pricelistId ? ctx.db.pricelist.findUnique({ where: { id: so.pricelistId } }) : null,
     so.quoteId ? ctx.db.quote.findUnique({ where: { id: so.quoteId } }) : null,
-    getFieldDefs(ctx.db, "sales_order"),
+    getFieldDefs(ctx.db, "sales_order"), orgPeople(ctx),
   ]);
+  const owner = people.find((p) => p.id === so.ownerId);
   const cfValues = (so.customFields ?? {}) as Record<string, unknown>;
   const products = new Map((await ctx.db.product.findMany({ where: { id: { in: so.lines.map((l) => l.productId ?? "") } } })).map((p) => [p.id, p]));
   const open = so.status === "confirmed";
   return (
     <>
       <PageHeader title={`Pedido ${so.number}`} crumbs={[{ label: "Pedidos", href: "/sales/orders" }, { label: so.number }]}
-        subtitle={<span className="flex flex-wrap items-center gap-2"><Link href={`/crm/customers/${so.customerId}`} className="hover:underline">{so.customer.name}</Link> · {term?.name ?? "sin plazo"} · {pricelist?.name ?? "precio base"} · compromiso {date(so.commitmentAt)}
+        subtitle={<span className="flex flex-wrap items-center gap-2"><Link href={`/crm/customers/${so.customerId}`} className="hover:underline">{so.customer.name}</Link> · vendedor {owner?.name ?? "—"} · {term?.name ?? "sin plazo"} · {pricelist?.name ?? "precio base"} · compromiso {date(so.commitmentAt)}
           <Badge tone={DELIVERY_STATUS[so.deliveryStatus].tone}>{DELIVERY_STATUS[so.deliveryStatus].label}</Badge>
           <Badge tone={INVOICE_STATUS[so.invoiceStatus].tone}>{INVOICE_STATUS[so.invoiceStatus].label}</Badge>
           {so.taxExempt && <Badge tone="amber">Sin IVA (exento)</Badge>}</span>} />
       <div className="mb-6"><WorkflowBar ctx={ctx} entityType="sales_order" entity={plain(so)} /></div>
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
+          {(defs.length > 0 || ctx.can("sales.quotes.write")) && (
+            <Card title="Despacho y facturación">
+              {ctx.can("sales.quotes.write") && so.status !== "canceled" ? (
+                <ActionForm action={saveSalesOrderFields} className="space-y-4">
+                  <input type="hidden" name="id" value={so.id} />
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <label className="text-sm"><span className="mb-1 block text-xs font-medium text-stone-600">Vendedor</span>
+                      <select name="ownerId" defaultValue={so.ownerId ?? ""} className={input}><option value="">—</option>{people.map((p) => <option key={p.id} value={p.id}>{p.name}{p.active ? "" : " (sin acceso)"}</option>)}</select></label>
+                  </div>
+                  <CustomFieldInputs defs={defs} values={cfValues} legend={null} wide />
+                  <SubmitButton className={btn.secondary}>Guardar</SubmitButton>
+                </ActionForm>
+              ) : <CustomFieldValues defs={defs} values={cfValues} />}
+            </Card>
+          )}
           <Card title="Productos" padded={false}>
             <Table head={["Descripción", "Cantidad", "Entregado", "Facturado", "Precio", "Desc.", "Subtotal", "Factura por"]}>
               {so.lines.map((l) => {
@@ -60,17 +77,6 @@ export default async function SalesOrderDetail({ params }: PageProps<"/sales/ord
               <div className="flex justify-between border-t pt-1 text-base font-semibold"><span>Total</span>{money(so.total, so.currency)}</div>
             </div>
           </Card>
-          {defs.length > 0 && (
-            <Card title="Despacho y facturación">
-              {ctx.can("sales.quotes.write") && so.status !== "canceled" ? (
-                <ActionForm action={saveSalesOrderFields} className="space-y-4">
-                  <input type="hidden" name="id" value={so.id} />
-                  <CustomFieldInputs defs={defs} values={cfValues} legend={null} wide />
-                  <SubmitButton className={btn.secondary}>Guardar</SubmitButton>
-                </ActionForm>
-              ) : <CustomFieldValues defs={defs} values={cfValues} />}
-            </Card>
-          )}
           <Card title="Entregas y facturas">
             <div className="space-y-2 text-sm">
               {deliveries.map((t) => <p key={t.id}><Link href={`/inventory/transfers/${t.id}`} className="font-mono text-xs font-semibold text-[var(--ork-violet)] underline">{t.number}</Link> <Badge tone={TRANSFER_STATUS[t.status].tone}>{TRANSFER_STATUS[t.status].label}</Badge></p>)}

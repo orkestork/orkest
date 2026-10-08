@@ -6,6 +6,7 @@ import { addActivity } from "@/lib/core/notify";
 import { ValidationError } from "./crm";
 import { createTransfer, defaultWarehouse, operationType } from "./stock";
 import { findBom } from "./manufacturing";
+import { getFieldDefs } from "@/lib/core/custom-fields";
 
 /**
  * Pedidos de venta: confirmados desde una cotización o directamente.
@@ -34,7 +35,7 @@ type LineIn = { productId?: string | null; description: string; quantity: number
 
 export async function createSalesOrder(ctx: ExecContext, d: {
   customerId: string; lines: LineIn[]; warehouseId?: string; pricelistId?: string | null; paymentTermId?: string | null;
-  quoteId?: string | null; commitmentAt?: string | Date | null; taxExempt?: boolean; customFields?: Record<string, unknown>;
+  quoteId?: string | null; commitmentAt?: string | Date | null; taxExempt?: boolean; customFields?: Record<string, unknown>; ownerId?: string | null;
 }) {
   const customer = await ctx.db.customer.findUnique({ where: { id: d.customerId } });
   if (!customer) throw new ValidationError({ customerId: "Cliente no encontrado" });
@@ -55,7 +56,7 @@ export async function createSalesOrder(ctx: ExecContext, d: {
     data: {
       organizationId: ctx.orgId, number: await nextNumber(ctx.db, ctx.orgId, "PV"), customerId: d.customerId, quoteId: d.quoteId ?? null,
       warehouseId: wh.id, pricelistId: d.pricelistId ?? customer.pricelistId, paymentTermId: d.paymentTermId ?? customer.paymentTermId,
-      status: initialState(wf, "confirmed"), subtotal, tax, total: subtotal + tax, ownerId: ctx.actorId,
+      status: initialState(wf, "confirmed"), subtotal, tax, total: subtotal + tax, ownerId: d.ownerId || ctx.actorId,
       commitmentAt: d.commitmentAt ? new Date(d.commitmentAt) : null, taxExempt: !!d.taxExempt, customFields: (d.customFields ?? {}) as object,
       lines: { create: rows.map((l) => ({ productId: l.productId || null, description: l.description, quantity: l.quantity, unitPrice: l.unitPrice, discountPct: l.discountPct, taxRate: l.taxRate, total: l.total })) },
     },
@@ -66,13 +67,20 @@ export async function createSalesOrder(ctx: ExecContext, d: {
   return so;
 }
 
+async function carryCustomFields(ctx: ExecContext, values: Record<string, unknown> | null) {
+  const keys = new Set((await getFieldDefs(ctx.db, "sales_order")).map((d) => d.key));
+  return Object.fromEntries(Object.entries(values ?? {}).filter(([k]) => keys.has(k)));
+}
+
 /** Acción CREATE_SALES_ORDER: convierte la cotización en pedido. */
 export async function salesOrderFromQuote(ctx: ExecContext, quoteId: string) {
   const exists = await ctx.db.salesOrder.findFirst({ where: { quoteId } });
   if (exists) return exists;
   const q = await ctx.db.quote.findUniqueOrThrow({ where: { id: quoteId }, include: { lines: { orderBy: { position: "asc" } } } });
   const so = await createSalesOrder(ctx, {
-    customerId: q.customerId, quoteId: q.id, pricelistId: q.pricelistId, paymentTermId: q.paymentTermId,
+    customerId: q.customerId, quoteId: q.id, pricelistId: q.pricelistId, paymentTermId: q.paymentTermId, ownerId: q.ownerId,
+    // Campos de Studio con la misma clave en cotización y pedido (p. ej. datos de despacho) pasan al pedido
+    customFields: await carryCustomFields(ctx, q.customFields as Record<string, unknown>),
     lines: q.lines.filter((l) => l.kind === "PRODUCT").map((l) => ({ productId: l.productId, description: l.description, quantity: num(l.quantity), unitPrice: num(l.unitPrice), discountPct: num(l.discountPct), taxRate: num(l.taxRate) })),
   });
   await addActivity(ctx, "quote", q.id, `Convertida en pedido ${so.number}`);

@@ -6,6 +6,7 @@ import { createQuote, updateQuote } from "@/lib/apps/sales";
 import { revalidatePath } from "next/cache";
 import { safeAction } from "@/lib/ui/action";
 import type { ActionResult } from "@/components/action-form";
+import { customFieldsFromForm, getFieldDefs } from "@/lib/core/custom-fields";
 
 const s = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
 const quotePayload = (form: FormData) => ({
@@ -18,12 +19,17 @@ export async function saveQuote(_: ActionResult, form: FormData): Promise<Action
   return safeAction(async () => {
     const ctx = await actionContext("sales.quotes.write", "sales");
     const id = s(form, "id");
+    // Campos de Studio de la cotización (se validan de nuevo al guardar)
+    const defs = await getFieldDefs(ctx.db, "quote");
+    const cf = customFieldsFromForm(defs, form);
+    if (!cf.ok) return { error: Object.values(cf.errors).join(" · ") };
+    const payload = { ...quotePayload(form), ...(defs.length ? { customFields: cf.values } : {}) };
     if (id) {
-      await updateQuote(ctx, id, quotePayload(form));
+      await updateQuote(ctx, id, payload);
       revalidatePath(`/sales/quotes/${id}`);
       return { ok: "Cambios guardados" };
     }
-    const q = await createQuote(ctx, quotePayload(form));
+    const q = await createQuote(ctx, payload);
     redirect(`/sales/quotes/${q.id}`);
   });
 }

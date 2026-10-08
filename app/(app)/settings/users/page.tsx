@@ -1,7 +1,7 @@
 import { requirePermission } from "@/lib/core/context";
 import { ActionForm, SubmitButton } from "@/components/action-form";
 import { Badge, btn, Card, Field, input, PageHeader, Table, td } from "@/components/ui";
-import { inviteUser, updateMembership } from "../actions";
+import { inviteUser, resetMemberPassword, updateMembership } from "../actions";
 
 export const metadata = { title: "Usuarios" };
 
@@ -33,7 +33,10 @@ export default async function Users() {
                 <td className={td}><Badge tone={m.status === "ACTIVE" ? "emerald" : "slate"}>{m.status === "ACTIVE" ? "Activo" : "Inactivo"}</Badge></td>
                 <td className={td}>
                   {m.userId !== ctx.user.id && (
-                    <form action={updateMembership}><input type="hidden" name="id" value={m.id} /><input type="hidden" name="status" value={m.status === "ACTIVE" ? "DISABLED" : "ACTIVE"} /><button className={btn.ghost}>{m.status === "ACTIVE" ? "Desactivar" : "Activar"}</button></form>
+                    <div className="flex flex-wrap items-center gap-1">
+                      <form action={updateMembership}><input type="hidden" name="id" value={m.id} /><input type="hidden" name="status" value={m.status === "ACTIVE" ? "DISABLED" : "ACTIVE"} /><button className={btn.ghost}>{m.status === "ACTIVE" ? "Desactivar" : "Activar"}</button></form>
+                      <ActionForm action={resetMemberPassword}><input type="hidden" name="id" value={m.id} /><SubmitButton className={btn.ghost} pendingText="Generando…">Generar contraseña</SubmitButton></ActionForm>
+                    </div>
                   )}
                 </td>
               </tr>

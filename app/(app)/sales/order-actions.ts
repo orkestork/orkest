@@ -18,6 +18,7 @@ export async function saveSalesOrder(_: ActionResult, form: FormData): Promise<A
     const ctx = await actionContext("sales.quotes.write", "sales");
     const cf = customFieldsFromForm(await getFieldDefs(ctx.db, "sales_order"), form);
     if (!cf.ok) throw new ValidationError(cf.errors);
+    if (s(form, "ownerId") && !(await ctx.db.membership.findFirst({ where: { userId: s(form, "ownerId") } }))) throw new ValidationError({ ownerId: "Vendedor no válido" });
     const customer = await ctx.db.customer.findUnique({ where: { id: s(form, "customerId") } });
     const pricelistId = s(form, "pricelistId") || customer?.pricelistId || null;
     const raw = JSON.parse(s(form, "lines") || "[]") as { productId: string; description: string; quantity: number; unitPrice: number; taxRate: number }[];
@@ -31,7 +32,7 @@ export async function saveSalesOrder(_: ActionResult, form: FormData): Promise<A
     const so = await createSalesOrder(ctx, {
       customerId: s(form, "customerId"), lines, warehouseId: s(form, "warehouseId") || undefined, pricelistId,
       paymentTermId: s(form, "paymentTermId") || null, commitmentAt: s(form, "commitmentAt") || null,
-      taxExempt: s(form, "taxMode") === "exempt", customFields: cf.values,
+      taxExempt: s(form, "taxMode") === "exempt", customFields: cf.values, ownerId: s(form, "ownerId") || null,
     });
     redirect(`/sales/orders/${so.id}`);
   });
@@ -82,8 +83,10 @@ export async function saveSalesOrderFields(_: ActionResult, form: FormData): Pro
     if (!so) throw new ValidationError({ id: "Pedido no encontrado" });
     const cf = customFieldsFromForm(await getFieldDefs(ctx.db, "sales_order"), form);
     if (!cf.ok) throw new ValidationError(cf.errors);
-    await ctx.db.salesOrder.update({ where: { id }, data: { customFields: json({ ...(so.customFields as object), ...cf.values }) } });
+    const ownerId = s(form, "ownerId");
+    if (ownerId && !(await ctx.db.membership.findFirst({ where: { userId: ownerId } }))) throw new ValidationError({ ownerId: "Vendedor no válido" });
+    await ctx.db.salesOrder.update({ where: { id }, data: { customFields: json({ ...(so.customFields as object), ...cf.values }), ...(form.has("ownerId") ? { ownerId: ownerId || null } : {}) } });
     revalidatePath(`/sales/orders/${id}`);
-    return { ok: "Datos de despacho guardados" };
+    return { ok: "Datos guardados" };
   });
 }

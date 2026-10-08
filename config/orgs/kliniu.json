@@ -1,12 +1,117 @@
 {
   "slug": "kliniu",
   "customFields": [
-    { "entityType": "sales_order", "key": "mensajeria", "label": "Mensajería", "type": "select", "helpText": "Transportadora o forma de entrega",
-      "options": ["Servientrega", "Coordinadora", "Interrapidísimo", "Envía", "TCC", "Deprisa", "Mensajero propio", "Recoge en tienda"] },
-    { "entityType": "sales_order", "key": "guia", "label": "Guía de seguimiento", "type": "select", "options": ["Con guía", "Sin guía"] },
-    { "entityType": "sales_order", "key": "numero_guia", "label": "Número de guía", "type": "text" },
-    { "entityType": "sales_order", "key": "empaque", "label": "Tipo de empaque", "type": "select",
-      "options": ["Caja de cartón", "Bolsa", "Estiba", "Empaque individual", "Sobre"] },
-    { "entityType": "sales_order", "key": "factura", "label": "Factura a nombre de", "type": "select", "options": ["Kliniu", "Persona natural"] }
+    {
+      "entityType": "sales_order",
+      "key": "mensajeria",
+      "label": "Mensajería",
+      "type": "select",
+      "helpText": "Transportadora o forma de entrega",
+      "options": [
+        "Servientrega",
+        "Coordinadora",
+        "Interrapidísimo",
+        "Envía",
+        "TCC",
+        "Deprisa",
+        "Mensajero propio",
+        "Recoge en tienda"
+      ]
+    },
+    {
+      "entityType": "sales_order",
+      "key": "guia",
+      "label": "Guía de seguimiento",
+      "type": "select",
+      "options": [
+        "Con guía",
+        "Sin guía"
+      ]
+    },
+    {
+      "entityType": "sales_order",
+      "key": "numero_guia",
+      "label": "Número de guía",
+      "type": "text"
+    },
+    {
+      "entityType": "sales_order",
+      "key": "empaque",
+      "label": "Tipo de empaque",
+      "type": "select",
+      "options": [
+        "Caja de cartón",
+        "Bolsa",
+        "Estiba",
+        "Empaque individual",
+        "Sobre"
+      ]
+    },
+    {
+      "entityType": "sales_order",
+      "key": "factura",
+      "label": "Factura a nombre de",
+      "type": "select",
+      "options": [
+        "Kliniu",
+        "Persona natural"
+      ]
+    },
+    {
+      "entityType": "quote",
+      "key": "mensajeria",
+      "label": "Mensajería",
+      "type": "select",
+      "helpText": "Transportadora o forma de entrega",
+      "options": [
+        "Servientrega",
+        "Coordinadora",
+        "Interrapidísimo",
+        "Envía",
+        "TCC",
+        "Deprisa",
+        "Mensajero propio",
+        "Recoge en tienda"
+      ]
+    },
+    {
+      "entityType": "quote",
+      "key": "guia",
+      "label": "Guía de seguimiento",
+      "type": "select",
+      "options": [
+        "Con guía",
+        "Sin guía"
+      ]
+    },
+    {
+      "entityType": "quote",
+      "key": "numero_guia",
+      "label": "Número de guía",
+      "type": "text"
+    },
+    {
+      "entityType": "quote",
+      "key": "empaque",
+      "label": "Tipo de empaque",
+      "type": "select",
+      "options": [
+        "Caja de cartón",
+        "Bolsa",
+        "Estiba",
+        "Empaque individual",
+        "Sobre"
+      ]
+    },
+    {
+      "entityType": "quote",
+      "key": "factura",
+      "label": "Factura a nombre de",
+      "type": "select",
+      "options": [
+        "Kliniu",
+        "Persona natural"
+      ]
+    }
   ]
 }

@@ -69,9 +69,9 @@ export const btn = {
 
 export const input = "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand)]/20";
 
-export function Field({ label, children, hint, error }: { label: string; children: ReactNode; hint?: string; error?: string }) {
+export function Field({ label, children, hint, error, className = "" }: { label: string; children: ReactNode; hint?: string; error?: string; className?: string }) {
   return (
-    <label className="block">
+    <label className={`block ${className}`}>
       <span className="mb-1 block text-xs font-medium text-slate-600">{label}</span>
       {children}
       {hint && !error && <span className="mt-1 block text-xs text-slate-400">{hint}</span>}

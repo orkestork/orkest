@@ -1,4 +1,6 @@
 import { requireModule } from "@/lib/core/context";
+import { RecordPicker } from "@/components/record-picker";
+import { lookupCustomers, quickCreateCustomer } from "../../lookup-actions";
 import { getWorkflow, availableTransitions } from "@/lib/core/workflow";
 import { orgUsers } from "@/lib/core/members";
 import { plain } from "@/lib/core/entities";
@@ -15,9 +17,8 @@ export default async function Opportunities() {
   const ctx = await requireModule("crm", "crm.opportunities.read");
   const wf = await getWorkflow(ctx.db, "opportunity");
   if (!wf) return <Empty title="No hay pipeline configurado">Configúralo en Studio → Workflows.</Empty>;
-  const [opps, customers, users] = await Promise.all([
+  const [opps, users] = await Promise.all([
     ctx.db.opportunity.findMany({ include: { customer: true }, orderBy: { amount: "desc" } }),
-    ctx.db.customer.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
     orgUsers(ctx),
   ]);
   const userMap = new Map(users.map((u) => [u.id, u.name]));
@@ -32,7 +33,7 @@ export default async function Opportunities() {
           <ActionForm action={saveOpportunity} className="grid items-end gap-3 sm:grid-cols-5">
             <Field label="Título"><input name="title" required className={input} /></Field>
             <Field label="Cliente">
-              <select name="customerId" className={input}><option value="">—</option>{customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
+              <RecordPicker name="customerId" label="Cliente" search={lookupCustomers} create={ctx.can("crm.customers.write") ? quickCreateCustomer : undefined} />
             </Field>
             <Field label="Valor"><input name="amount" type="number" min="0" className={input} /></Field>
             <Field label="Responsable">

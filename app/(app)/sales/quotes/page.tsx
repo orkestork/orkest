@@ -1,7 +1,7 @@
 import Link from "@/components/plink";
 import { requireModule } from "@/lib/core/context";
 import { getWorkflow } from "@/lib/core/workflow";
-import { orgUsers } from "@/lib/core/members";
+import { orgPeople } from "@/lib/core/members";
 import { ControlPanel } from "@/components/list/control-panel";
 import { DataTable, type Column, type Group, type Row } from "@/components/list/data-table";
 import { Avatar, StatusPill } from "@/components/list/status-pill";
@@ -24,7 +24,7 @@ export default async function Quotes({ searchParams }: PageProps<"/sales/quotes"
   const active = str("f").split(",").filter(Boolean);
   const view = str("view") || "list";
 
-  const [wf, users, favorites] = await Promise.all([getWorkflow(ctx.db, "quote"), orgUsers(ctx), listFavorites(ctx, "quote")]);
+  const [wf, users, favorites] = await Promise.all([getWorkflow(ctx.db, "quote"), orgPeople(ctx), listFavorites(ctx, "quote")]);
   applyDefaultFavorite(favorites, Object.keys(sp).length === 0, "/sales/quotes");
   const L = parseList(sp, "number");
   const states = wf?.states ?? [];

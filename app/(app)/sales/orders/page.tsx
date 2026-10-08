@@ -1,6 +1,6 @@
 import { requireModule } from "@/lib/core/context";
 import { getWorkflow } from "@/lib/core/workflow";
-import { orgUsers } from "@/lib/core/members";
+import { orgPeople } from "@/lib/core/members";
 import { ControlPanel } from "@/components/list/control-panel";
 import { DataTable, type Column, type Group, type Row } from "@/components/list/data-table";
 import { Avatar, StatusPill } from "@/components/list/status-pill";
@@ -25,7 +25,7 @@ const monthShort = (d: Date) => d.toLocaleDateString("es-CO", { month: "short", 
 export default async function SalesOrders({ searchParams }: PageProps<"/sales/orders">) {
   const ctx = await requireModule("sales", "sales.quotes.read");
   const sp = await searchParams;
-  const [wf, users, defs, favorites] = await Promise.all([getWorkflow(ctx.db, "sales_order"), orgUsers(ctx), getFieldDefs(ctx.db, "sales_order"), listFavorites(ctx, "sales_order")]);
+  const [wf, users, defs, favorites] = await Promise.all([getWorkflow(ctx.db, "sales_order"), orgPeople(ctx), getFieldDefs(ctx.db, "sales_order"), listFavorites(ctx, "sales_order")]);
   applyDefaultFavorite(favorites, Object.keys(sp).length === 0, "/sales/orders");
   const L = parseList(sp, "number");
   // Compatibilidad con enlaces antiguos (?filter=to_deliver|to_invoice)
@@ -103,7 +103,7 @@ export default async function SalesOrders({ searchParams }: PageProps<"/sales/or
   // ── Orden y página (en la base: hay organizaciones con miles de pedidos) ──
   const sort = L.sort || "createdAt", dir: Prisma.SortOrder = L.dir;
   const orderBy: Prisma.SalesOrderOrderByWithRelationInput =
-    sort === "customer" ? { customer: { name: dir } } : ["number", "total", "status", "commitmentAt", "deliveryStatus", "invoiceStatus"].includes(sort) ? { [sort]: dir } : { createdAt: dir };
+    sort === "customer" ? { customer: { name: dir } } : sort === "owner" ? { ownerId: dir } : ["number", "total", "status", "commitmentAt", "deliveryStatus", "invoiceStatus"].includes(sort) ? { [sort]: dir } : { createdAt: dir };
   const page = L.page;
   const group = L.groups.join(",");
   const [total, orders] = await Promise.all([
@@ -159,7 +159,7 @@ export default async function SalesOrders({ searchParams }: PageProps<"/sales/or
     { key: "number", label: "Número", sortable: true, width: "110px" },
     { key: "createdAt", label: "Fecha", sortable: true, width: "150px" },
     { key: "customer", label: "Cliente", sortable: true },
-    { key: "owner", label: "Vendedor", width: "150px" },
+    { key: "owner", label: "Vendedor", sortable: true, width: "170px" },
     { key: "activities", label: "Actividades", align: "center", optional: true, hidden: true, width: "112px" },
     { key: "subtotal", label: "Base", align: "right", optional: true, hidden: true, sum: true, width: "140px" },
     { key: "total", label: "Total", align: "right", sortable: true, sum: true, width: "140px" },

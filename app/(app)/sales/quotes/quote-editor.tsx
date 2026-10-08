@@ -1,7 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { ActionForm, SubmitButton, type ActionResult } from "@/components/action-form";
+import { RecordPicker } from "@/components/record-picker";
+import { lookupCustomers, quickCreateCustomer } from "@/app/(app)/lookup-actions";
 
 type Product = { id: string; sku: string; name: string; price: number; cost: number; taxRate: number; unit: string };
 type Opt = { id: string; name: string };
@@ -13,9 +15,11 @@ const cell = "w-full rounded-md border border-transparent bg-transparent px-1.5 
 const field = "w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm outline-none focus:border-[var(--ork-violet)]";
 
 /** Ficha editable de cotización (estilo Odoo): encabezado, líneas con secciones/notas, términos y totales. */
-export function QuoteEditor({ action, initial, products, customers, terms, pricelists, readOnlyHeader }: {
+export function QuoteEditor({ action, initial, products, customer, terms, pricelists, readOnlyHeader, canCreateCustomer, extra }: {
   action: (p: ActionResult, f: FormData) => Promise<ActionResult>; initial: EditorInitial;
-  products: Product[]; customers: Opt[]; terms: Opt[]; pricelists: Opt[]; readOnlyHeader?: boolean;
+  products: Product[]; customer: Opt | null; terms: Opt[]; pricelists: Opt[]; readOnlyHeader?: boolean; canCreateCustomer?: boolean;
+  /** Campos adicionales (p. ej. campos de Studio) dentro del mismo formulario */
+  extra?: ReactNode;
 }) {
   const [head, setHead] = useState({ customerId: initial.customerId, validUntil: initial.validUntil, paymentTermId: initial.paymentTermId, pricelistId: initial.pricelistId, terms: initial.terms, notes: initial.notes });
   const [lines, setLines] = useState<EditorLine[]>(initial.lines.length ? initial.lines : []);
@@ -40,9 +44,8 @@ export function QuoteEditor({ action, initial, products, customers, terms, price
 
       <div className="grid gap-x-10 gap-y-3 md:grid-cols-2">
         <label className="grid grid-cols-[120px_1fr] items-center gap-3 text-sm"><span className="font-semibold text-stone-800">Cliente</span>
-          <select value={head.customerId} disabled={readOnlyHeader} onChange={(e) => { setHead({ ...head, customerId: e.target.value }); touch(); }} className={field} required>
-            <option value="">Selecciona…</option>{customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select></label>
+          <RecordPicker label="Cliente" initial={customer} disabled={readOnlyHeader} required search={lookupCustomers} create={canCreateCustomer ? quickCreateCustomer : undefined}
+            placeholder="Busca por nombre, NIT o teléfono…" onChange={(c) => { setHead({ ...head, customerId: c?.id ?? "" }); touch(); }} /></label>
         <label className="grid grid-cols-[120px_1fr] items-center gap-3 text-sm"><span className="font-semibold text-stone-800">Vencimiento</span>
           <input type="date" value={head.validUntil} onChange={(e) => { setHead({ ...head, validUntil: e.target.value }); touch(); }} className={field} /></label>
         <label className="grid grid-cols-[120px_1fr] items-center gap-3 text-sm"><span className="font-semibold text-stone-800">Lista de precios</span>
@@ -50,6 +53,8 @@ export function QuoteEditor({ action, initial, products, customers, terms, price
         <label className="grid grid-cols-[120px_1fr] items-center gap-3 text-sm"><span className="font-semibold text-stone-800">Plazo de pago</span>
           <select value={head.paymentTermId} onChange={(e) => { setHead({ ...head, paymentTermId: e.target.value }); touch(); }} className={field}><option value="">El del cliente</option>{terms.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></label>
       </div>
+
+      {extra && <div onChange={touch} className="rounded-xl border border-[var(--ork-rule)] bg-[var(--ork-paper-light)] p-4">{extra}</div>}
 
       <div className="overflow-x-auto rounded-xl border border-stone-200">
         <table className="w-full min-w-[860px] table-fixed text-sm">

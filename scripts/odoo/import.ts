@@ -20,6 +20,8 @@ const ADMIN_EMAIL = "admin@kliniu.co";
 const SINCE = process.env.ODOO_SINCE ?? new Date(Date.now() - 365 * 864e5).toISOString().slice(0, 10);
 const RESET = process.argv.includes("--reset");
 
+// Registros de Odoo: forma dinámica por modelo
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type R = Record<string, any>;
 const id = () => "c" + randomUUID().replace(/-/g, "").slice(0, 24);
 const m2o = (v: unknown) => (Array.isArray(v) ? (v[0] as number) : undefined);
@@ -382,6 +384,7 @@ async function main() {
     ?? (await prisma.user.create({ data: { email: ADMIN_EMAIL, name: "Administrador Kliniu", passwordHash: await hashPassword("orkest123") } }));
   await prisma.membership.create({ data: { organizationId: orgId, userId: user.id, roleId: owner.id, title: "Administrador" } });
   if (await prisma.plan.findUnique({ where: { key: "growth" } })) await prisma.subscription.create({ data: { organizationId: orgId, planKey: "growth", status: "TRIAL" } });
+  await (await import("./salespeople")).syncSalespeople(ORG_SLUG, SINCE);
 
   // ───────── 11. Verificación contra Odoo ─────────
   const sum = async (model: string, field: string) => Number((await (prisma as any)[model].aggregate({ where: { organizationId: orgId }, _sum: { [field]: true } }))._sum[field] ?? 0);

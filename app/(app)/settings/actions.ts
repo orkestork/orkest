@@ -170,3 +170,23 @@ export async function revokeApiKey(form: FormData) {
   await ctx.db.apiKey.update({ where: { id: s(form, "id") }, data: { revokedAt: new Date() } });
   revalidatePath("/settings/integrations");
 }
+
+/**
+ * Genera una contraseña temporal para un miembro (p. ej. vendedores traídos de Odoo, que llegan sin acceso).
+ * Por seguridad solo aplica a usuarios que pertenecen ÚNICAMENTE a esta organización: así un administrador
+ * nunca puede tomar control de una cuenta que también usa otra empresa.
+ */
+export async function resetMemberPassword(_: ActionResult, form: FormData): Promise<ActionResult> {
+  return safeAction(async () => {
+    const ctx = await actionContext("org.users.manage");
+    const m = await ctx.db.membership.findUniqueOrThrow({ where: { id: s(form, "id") }, include: { role: true, user: true } });
+    if (m.userId === ctx.user.id) return { error: "Cambia tu propia contraseña desde tu perfil" };
+    if (m.role.key === "OWNER" && ctx.role.key !== "OWNER") return { error: "Solo un propietario puede hacerlo con otro propietario" };
+    const orgs = await prisma.membership.count({ where: { userId: m.userId } });
+    if (orgs > 1 || m.user.isPlatformAdmin) return { error: "Este usuario también pertenece a otra organización: debe cambiar su contraseña él mismo" };
+    const temp = Math.random().toString(36).slice(2, 6) + Math.random().toString(36).slice(2, 8);
+    await prisma.user.update({ where: { id: m.userId }, data: { passwordHash: await hashPassword(temp) } });
+    await audit(ctx, "MemberPasswordReset", "membership", m.id, {});
+    return { ok: `Contraseña temporal para ${m.user.email}: ${temp}` };
+  });
+}

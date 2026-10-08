@@ -23,7 +23,9 @@
     "import:odoo": "tsx --env-file=.env --env-file=.env.odoo scripts/odoo/import.ts",
     "import:odoo:supabase": "tsx --env-file=.env.supabase --env-file=.env.odoo scripts/odoo/import.ts",
     "org:config": "tsx --env-file=.env scripts/org-config.ts",
-    "org:config:supabase": "tsx --env-file=.env.supabase scripts/org-config.ts"
+    "org:config:supabase": "tsx --env-file=.env.supabase scripts/org-config.ts",
+    "import:odoo:salespeople": "tsx --env-file=.env --env-file=.env.odoo scripts/odoo/salespeople.ts",
+    "import:odoo:salespeople:supabase": "tsx --env-file=.env.supabase --env-file=.env.odoo scripts/odoo/salespeople.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.0",
