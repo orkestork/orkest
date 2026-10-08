@@ -6,7 +6,7 @@ import { signSession } from "@/lib/core/auth";
  * Rastreador de calidad: para cada usuario recorre todos los enlaces internos visibles
  * y reporta errores 500, 404, enlaces visibles que terminan en "sin permiso" y textos técnicos filtrados.
  */
-const BASE = "http://localhost:3000";
+const BASE = process.env.BASE_URL ?? "http://localhost:3000";
 const USERS = ["admin@presservac.co", "gerencia@presservac.co", "comercial@presservac.co", "inventario@presservac.co", "calidad@presservac.co", "finanzas@presservac.co", "produccion@presservac.co", "admin@andina.co", "plataforma@or-k.co"];
 const LEAKS = [/PrismaClient/, /Invalid `/, /Unhandled Runtime Error/, /Application error/, /NEXT_REDIRECT/, /\[object Object\]/, />undefined</, />NaN</, /Internal Server Error/];
 const MAX = Number(process.env.MAX ?? 260);

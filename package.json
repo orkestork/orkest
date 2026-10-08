@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:supabase": "node --env-file=.env.supabase node_modules/next/dist/bin/next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -14,6 +15,7 @@
     "db:generate": "prisma generate",
     "db:seed": "tsx prisma/seed.ts",
     "db:reset": "prisma db push && tsx prisma/seed.ts",
+    "db:push:supabase": "node --env-file=.env.supabase node_modules/prisma/build/index.js db push",
     "postinstall": "prisma generate",
     "test:flows": "tsx scripts/test-phase1.ts && tsx scripts/test-phase2.ts && tsx scripts/test-phase3.ts && tsx scripts/test-warehouses.ts && tsx scripts/test-inventory-audit.ts",
     "check:seed": "tsx scripts/check-seed.ts",
