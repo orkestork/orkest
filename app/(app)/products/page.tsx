@@ -12,6 +12,7 @@ const KIND: Record<string, { label: string; tone: string }> = { GOODS: { label: 
 
 export default async function Products({ searchParams }: PageProps<"/products">) {
   const ctx = await requireModule("products", "products.read");
+  const hideCost = ctx.restricted("deny:costs");
   const sp = await searchParams;
   const str = (k: string) => (typeof sp[k] === "string" ? (sp[k] as string) : "");
   const f = str("f").split(",").filter(Boolean);
@@ -30,23 +31,23 @@ export default async function Products({ searchParams }: PageProps<"/products">)
   const sort = str("sort"), dir = str("dir") === "asc" ? 1 : -1;
   if (sort) {
     const key: Record<string, (p: (typeof products)[number]) => string | number> = { sku: (p) => p.sku, name: (p) => p.name, category: (p) => p.category ?? "", price: (p) => n(p.price), cost: (p) => n(p.cost), stock: (p) => n(p.stock), margin: (p) => (n(p.price) ? (n(p.price) - n(p.cost)) / n(p.price) : -1) };
-    const kf = key[sort] ?? key.name;
+    const kf = (hideCost && ["cost", "margin"].includes(sort) ? undefined : key[sort]) ?? key.name;
     products.sort((a, b) => (kf(a) > kf(b) ? dir : kf(a) < kf(b) ? -dir : 0));
   }
 
   const toRow = (p: (typeof products)[number]): Row => {
-    const marginPct = p.canBeSold && n(p.price) ? ((n(p.price) - n(p.cost)) / n(p.price)) * 100 : null;
+    const marginPct = !hideCost && p.canBeSold && n(p.price) ? ((n(p.price) - n(p.cost)) / n(p.price)) * 100 : null;
     const low = n(p.minStock) > 0 && n(p.stock) < n(p.minStock);
     return {
       id: p.id, href: `/products/${p.id}`,
-      raw: { sku: p.sku, name: p.name, kind: KIND[p.kind]?.label ?? p.kind, category: p.category ?? "", price: n(p.price), cost: n(p.cost), margin: marginPct ?? "", stock: n(p.stock), unit: p.unit },
+      raw: { sku: p.sku, name: p.name, kind: KIND[p.kind]?.label ?? p.kind, category: p.category ?? "", price: n(p.price), cost: hideCost ? "" : n(p.cost), margin: hideCost ? "" : marginPct ?? "", stock: n(p.stock), unit: p.unit },
       cells: {
         sku: <span className="font-mono text-xs">{p.sku}</span>,
         name: <span className="font-medium">{p.name}</span>,
         kind: <StatusPill label={KIND[p.kind]?.label ?? p.kind} tone={KIND[p.kind]?.tone} />,
         category: p.category ?? "—",
         price: p.canBeSold ? money(p.price) : <span className="text-stone-400">No se vende</span>,
-        cost: money(p.cost),
+        cost: hideCost ? "" : money(p.cost),
         margin: marginPct === null ? <span className="text-stone-400">—</span> : <span className={marginPct < 15 ? "font-semibold text-rose-700" : ""}>{marginPct.toLocaleString("es-CO", { maximumFractionDigits: 1 })} %</span>,
         stock: p.kind === "GOODS" ? <span className={low ? "font-semibold text-rose-700" : ""}>{n(p.stock).toLocaleString("es-CO")} {p.unit}</span> : <span className="text-stone-400">—</span>,
       },
@@ -58,8 +59,10 @@ export default async function Products({ searchParams }: PageProps<"/products">)
     { key: "kind", label: "Tipo", width: "130px" },
     { key: "category", label: "Categoría", sortable: true, width: "150px" },
     { key: "price", label: "Precio de venta", align: "right", sortable: true, width: "150px" },
-    { key: "cost", label: "Costo", align: "right", sortable: true, optional: true, width: "140px" },
-    { key: "margin", label: "Margen", align: "right", sortable: true, optional: true, width: "100px" },
+    ...(hideCost ? [] : [
+      { key: "cost", label: "Costo", align: "right" as const, sortable: true, optional: true, width: "140px" },
+      { key: "margin", label: "Margen", align: "right" as const, sortable: true, optional: true, width: "100px" },
+    ]),
     { key: "stock", label: "A mano", align: "right", sortable: true, width: "130px" },
   ];
   const group = str("group");
@@ -85,7 +88,7 @@ export default async function Products({ searchParams }: PageProps<"/products">)
         pager={{ from: products.length ? 1 : 0, to: products.length, total: products.length }} />
 
       {view === "list" ? (
-        <DataTable storageKey="products" columns={columns} rows={products.map(toRow)} groups={groups} moneyColumns={["price", "cost"]} />
+        <DataTable canExport={!ctx.restricted("deny:export")} storageKey="products" columns={columns} rows={products.map(toRow)} groups={groups} moneyColumns={["price", "cost"]} />
       ) : products.length === 0 ? (
         <p className="py-16 text-center text-stone-500">No hay productos con estos filtros.</p>
       ) : (
@@ -98,7 +101,7 @@ export default async function Products({ searchParams }: PageProps<"/products">)
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold" title={p.name}>{p.name}</p>
                   <p className="font-mono text-xs text-stone-500">[{p.sku}]</p>
-                  <p className="mt-1 text-sm">{p.canBeSold ? <>Precio: <b className="tabular-nums">{money(p.price)}</b></> : <span className="text-stone-500">Costo: {money(p.cost)}</span>}</p>
+                  <p className="mt-1 text-sm">{p.canBeSold ? <>Precio: <b className="tabular-nums">{money(p.price)}</b></> : <span className="text-stone-500">{hideCost ? "Insumo" : <>Costo: {money(p.cost)}</>}</span>}</p>
                   {p.kind === "GOODS"
                     ? <p className={`text-xs ${low ? "font-semibold text-rose-700" : "text-stone-600"}`}>A mano: {n(p.stock).toLocaleString("es-CO")} {p.unit}{low ? ` · mínimo ${n(p.minStock).toLocaleString("es-CO")}` : ""}</p>
                     : <p className="text-xs text-stone-600">{KIND[p.kind]?.label}</p>}

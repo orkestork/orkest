@@ -34,7 +34,7 @@ export default async function Warehouses() {
                 <div className="grid gap-4 sm:grid-cols-3">
                   <div><p className="text-xs text-stone-500">Referencias con stock</p><p className="text-lg font-semibold tabular-nums">{st.refs}</p></div>
                   <div><p className="text-xs text-stone-500">Unidades</p><p className="text-lg font-semibold tabular-nums">{num(st.units)}</p></div>
-                  <div><p className="text-xs text-stone-500">Valor a costo</p><p className="text-lg font-semibold tabular-nums">{money(st.value)}</p></div>
+                  {!ctx.restricted("deny:costs") && <div><p className="text-xs text-stone-500">Valor a costo</p><p className="text-lg font-semibold tabular-nums">{money(st.value)}</p></div>}
                 </div>
                 <div className="mt-3 flex flex-wrap gap-1">{w.operationTypes.map((o) => <Badge key={o.id} tone="violet">{OP_KIND[o.kind]} · {o.prefix}</Badge>)}</div>
                 {canWrite && (

@@ -80,6 +80,8 @@ export async function executeTransition(ctx: OrgContext, entityType: string, ent
   if (!wf || !t) throw new Error("Transición no existe");
   if (t.fromKey !== "*" && t.fromKey !== entity.status) throw new Error("La transición no aplica al estado actual");
   if (t.permission && !ctx.can(t.permission)) throw new Error(`Permiso requerido: ${t.permission}`);
+  // Alcance "solo sus registros" en ventas
+  if ((entityType === "quote" || entityType === "sales_order") && ctx.restricted("scope:own:sales") && entity.ownerId !== ctx.user.id) throw new Error(`${def.label} no encontrado`);
   if (!evaluate(t.guard as ConditionGroup | null, entity)) throw new Error("No se cumplen las condiciones de la transición");
 
   const ap = t.approval as TransitionApproval | null;

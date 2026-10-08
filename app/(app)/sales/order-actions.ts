@@ -19,6 +19,7 @@ export async function saveSalesOrder(_: ActionResult, form: FormData): Promise<A
     const cf = customFieldsFromForm(await getFieldDefs(ctx.db, "sales_order"), form);
     if (!cf.ok) throw new ValidationError(cf.errors);
     if (s(form, "ownerId") && !(await ctx.db.membership.findFirst({ where: { userId: s(form, "ownerId") } }))) throw new ValidationError({ ownerId: "Vendedor no válido" });
+    if (ctx.restricted("scope:own:sales") && s(form, "ownerId") && s(form, "ownerId") !== ctx.user.id) throw new ValidationError({ ownerId: "Solo puedes crear pedidos a tu nombre" });
     const customer = await ctx.db.customer.findUnique({ where: { id: s(form, "customerId") } });
     const pricelistId = s(form, "pricelistId") || customer?.pricelistId || null;
     const raw = JSON.parse(s(form, "lines") || "[]") as { productId: string; description: string; quantity: number; unitPrice: number; taxRate: number }[];
@@ -41,6 +42,9 @@ export async function saveSalesOrder(_: ActionResult, form: FormData): Promise<A
 export async function soAction(_: ActionResult, form: FormData): Promise<ActionResult> {
   return safeAction(async () => {
     const id = s(form, "id");
+    const scoped = await actionContext("sales.quotes.read", "sales");
+    const own = await scoped.db.salesOrder.findUnique({ where: { id }, select: { ownerId: true } });
+    if (!own || (scoped.restricted("scope:own:sales") && own.ownerId !== scoped.user.id)) return { error: "Pedido no encontrado" };
     if (s(form, "op") === "invoice") {
       const ctx = await actionContext("invoicing.write", "invoicing");
       const inv = await invoiceFromSalesOrder(ctx, id);
@@ -80,7 +84,8 @@ export async function saveSalesOrderFields(_: ActionResult, form: FormData): Pro
     const ctx = await actionContext("sales.quotes.write", "sales");
     const id = s(form, "id");
     const so = await ctx.db.salesOrder.findUnique({ where: { id } });
-    if (!so) throw new ValidationError({ id: "Pedido no encontrado" });
+    if (!so || (ctx.restricted("scope:own:sales") && so.ownerId !== ctx.user.id)) throw new ValidationError({ id: "Pedido no encontrado" });
+    if (ctx.restricted("scope:own:sales") && s(form, "ownerId") && s(form, "ownerId") !== ctx.user.id) throw new ValidationError({ ownerId: "No puedes reasignar el pedido" });
     const cf = customFieldsFromForm(await getFieldDefs(ctx.db, "sales_order"), form);
     if (!cf.ok) throw new ValidationError(cf.errors);
     const ownerId = s(form, "ownerId");

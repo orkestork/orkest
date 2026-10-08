@@ -11,7 +11,18 @@ export default async function Search({ searchParams }: PageProps<"/search">) {
   const { q } = await searchParams;
   const query = typeof q === "string" ? q.trim() : "";
   const searchable = Object.values(ENTITIES).filter((e) => e.search && ctx.hasModule(e.module) && ctx.can(e.readPermission));
-  const results = query.length >= 2 ? await Promise.all(searchable.map(async (e) => ({ e, hits: await e.search!(ctx.db, query) }))) : [];
+  const results = query.length >= 2 ? await Promise.all(searchable.map(async (e) => {
+    let hits = await e.search!(ctx.db, query);
+    // Alcance "solo sus registros": un vendedor restringido no ve documentos de otros
+    if (ctx.restricted("scope:own:sales") && (e.type === "quote" || e.type === "sales_order")) {
+      const ids = hits.map((h) => h.id);
+      const own = new Set((e.type === "quote"
+        ? await ctx.db.quote.findMany({ where: { id: { in: ids }, ownerId: ctx.user.id }, select: { id: true } })
+        : await ctx.db.salesOrder.findMany({ where: { id: { in: ids }, ownerId: ctx.user.id }, select: { id: true } })).map((r) => r.id));
+      hits = hits.filter((h) => own.has(h.id));
+    }
+    return { e, hits };
+  })) : [];
   const total = results.reduce((s, r) => s + r.hits.length, 0);
   return (
     <>

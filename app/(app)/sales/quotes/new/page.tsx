@@ -19,10 +19,10 @@ export default async function NewQuote({ searchParams }: PageProps<"/sales/quote
     <>
       <RecordTopBar listLabel="Cotizaciones" listHref="/sales/quotes" title="Nueva" />
       <div className="rounded-2xl border border-[var(--ork-rule)] bg-white p-6">
-        <QuoteEditor action={saveQuote}
+        <QuoteEditor showMargin={!ctx.restricted("deny:costs")} action={saveQuote}
           initial={{ customerId: typeof customerId === "string" ? customerId : "", validUntil: new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10), paymentTermId: "", pricelistId: "", terms: "Oferta válida por 30 días. Precios en pesos colombianos, IVA discriminado.", notes: "",
             lines: [{ kind: "PRODUCT", productId: "", description: "", quantity: 1, unitPrice: 0, discountPct: 0, taxRate: 19 }] }}
-          products={products.map((p) => ({ id: p.id, sku: p.sku, name: p.name, price: Number(p.price), cost: Number(p.cost), taxRate: Number(p.taxRate), unit: p.unit }))}
+          products={products.map((p) => ({ id: p.id, sku: p.sku, name: p.name, price: Number(p.price), cost: ctx.restricted("deny:costs") ? 0 : Number(p.cost), taxRate: Number(p.taxRate), unit: p.unit }))}
           extra={defs.length > 0 && <CustomFieldInputs defs={defs} legend="Despacho y facturación" wide />}
           customer={customer} canCreateCustomer={ctx.can("crm.customers.write")} terms={terms} pricelists={pricelists} />
       </div>

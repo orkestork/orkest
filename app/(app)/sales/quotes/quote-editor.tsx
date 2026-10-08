@@ -15,11 +15,13 @@ const cell = "w-full rounded-md border border-transparent bg-transparent px-1.5 
 const field = "w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm outline-none focus:border-[var(--ork-violet)]";
 
 /** Ficha editable de cotización (estilo Odoo): encabezado, líneas con secciones/notas, términos y totales. */
-export function QuoteEditor({ action, initial, products, customer, terms, pricelists, readOnlyHeader, canCreateCustomer, extra }: {
+export function QuoteEditor({ action, initial, products, customer, terms, pricelists, readOnlyHeader, canCreateCustomer, extra, showMargin = true }: {
   action: (p: ActionResult, f: FormData) => Promise<ActionResult>; initial: EditorInitial;
   products: Product[]; customer: Opt | null; terms: Opt[]; pricelists: Opt[]; readOnlyHeader?: boolean; canCreateCustomer?: boolean;
   /** Campos adicionales (p. ej. campos de Studio) dentro del mismo formulario */
   extra?: ReactNode;
+  /** false si el rol tiene los costos ocultos (los costos tampoco se envían al navegador) */
+  showMargin?: boolean;
 }) {
   const [head, setHead] = useState({ customerId: initial.customerId, validUntil: initial.validUntil, paymentTermId: initial.paymentTermId, pricelistId: initial.pricelistId, terms: initial.terms, notes: initial.notes });
   const [lines, setLines] = useState<EditorLine[]>(initial.lines.length ? initial.lines : []);
@@ -107,7 +109,7 @@ export function QuoteEditor({ action, initial, products, customer, terms, pricel
           <div className="flex justify-between"><dt className="text-stone-600">Subtotal</dt><dd className="tabular-nums">{fmt(subtotal)}</dd></div>
           <div className="flex justify-between"><dt className="text-stone-600">Impuestos</dt><dd className="tabular-nums">{fmt(tax)}</dd></div>
           <div className="flex items-baseline justify-between border-t border-stone-200 pt-2"><dt className="font-semibold">Total</dt><dd className="text-2xl font-semibold tabular-nums tracking-tight text-[var(--ork-ink)]">{fmt(subtotal + tax)}</dd></div>
-          <div className="flex justify-between pt-2 text-stone-600"><dt>Margen</dt><dd className={`tabular-nums ${margin < 0 ? "font-semibold text-rose-700" : ""}`}>{fmt(margin)} ({subtotal ? Math.round((margin / subtotal) * 100) : 0} %)</dd></div>
+          {showMargin && <div className="flex justify-between pt-2 text-stone-600"><dt>Margen</dt><dd className={`tabular-nums ${margin < 0 ? "font-semibold text-rose-700" : ""}`}>{fmt(margin)} ({subtotal ? Math.round((margin / subtotal) * 100) : 0} %)</dd></div>}
         </dl>
       </div>
 

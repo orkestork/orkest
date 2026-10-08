@@ -1,4 +1,5 @@
 import Link from "@/components/plink";
+import { canSeeOwned } from "@/lib/core/scope";
 import { notFound } from "next/navigation";
 import { requireModule } from "@/lib/core/context";
 import { getFieldDefs } from "@/lib/core/custom-fields";
@@ -23,7 +24,7 @@ export default async function QuoteDetail({ params }: PageProps<"/sales/quotes/[
   const ctx = await requireModule("sales", "sales.quotes.read");
   const { id } = await params;
   const q = await ctx.db.quote.findUnique({ where: { id }, include: { customer: true, lines: { orderBy: { position: "asc" } } } });
-  if (!q) notFound();
+  if (!q || !canSeeOwned(ctx, "sales", q.ownerId)) notFound();
 
   const [wf, { transitions }, users, defs, approvals, so, order, products, terms, pricelists] = await Promise.all([
     getWorkflow(ctx.db, "quote"), availableTransitions(ctx, "quote", plain(q)), orgUsers(ctx), getFieldDefs(ctx.db, "quote"),
@@ -43,7 +44,7 @@ export default async function QuoteDetail({ params }: PageProps<"/sales/quotes/[
   const state = wf?.states.find((s) => s.key === q.status);
   const editable = ["draft", "sent"].includes(q.status) && ctx.can("sales.quotes.write");
   const idx = order.findIndex((o) => o.id === id);
-  const cost = new Map(products.map((p) => [p.id, n(p.cost)]));
+  const cost = new Map(ctx.restricted("deny:costs") ? [] : products.map((p) => [p.id, n(p.cost)]));
   const margin = n(q.subtotal) - q.lines.reduce((s, l) => s + n(l.quantity) * (cost.get(l.productId ?? "") ?? 0), 0);
   const soLine = (productId: string | null) => so?.lines.find((l) => l.productId === productId);
 
@@ -83,17 +84,17 @@ export default async function QuoteDetail({ params }: PageProps<"/sales/quotes/[
           <div className="flex justify-between"><dt className="text-stone-600">Subtotal</dt><dd className="tabular-nums">{money(q.subtotal)}</dd></div>
           <div className="flex justify-between"><dt className="text-stone-600">Impuestos</dt><dd className="tabular-nums">{money(q.tax)}</dd></div>
           <div className="flex items-baseline justify-between border-t border-stone-200 pt-2"><dt className="font-semibold">Total</dt><dd className="text-2xl font-semibold tabular-nums tracking-tight text-[var(--ork-ink)]">{money(q.total)}</dd></div>
-          <div className="flex justify-between pt-2 text-stone-600"><dt>Margen</dt><dd className="tabular-nums">{money(margin)} ({n(q.subtotal) ? Math.round((margin / n(q.subtotal)) * 100) : 0} %)</dd></div>
+          {!ctx.restricted("deny:costs") && <div className="flex justify-between pt-2 text-stone-600"><dt>Margen</dt><dd className="tabular-nums">{money(margin)} ({n(q.subtotal) ? Math.round((margin / n(q.subtotal)) * 100) : 0} %)</dd></div>}
         </dl>
       </div>
     </div>
   );
 
   const editor = (
-    <QuoteEditor key={q.updatedAt.toISOString()} action={saveQuote}
+    <QuoteEditor showMargin={!ctx.restricted("deny:costs")} key={q.updatedAt.toISOString()} action={saveQuote}
       initial={{ id: q.id, customerId: q.customerId, validUntil: iso(q.validUntil), paymentTermId: q.paymentTermId ?? "", pricelistId: q.pricelistId ?? "", terms: q.terms ?? "", notes: q.notes ?? "",
         lines: q.lines.map((l): EditorLine => ({ kind: l.kind as EditorLine["kind"], productId: l.productId ?? "", description: l.description, quantity: n(l.quantity), unitPrice: n(l.unitPrice), discountPct: n(l.discountPct), taxRate: n(l.taxRate) })) }}
-      products={products.map((p) => ({ id: p.id, sku: p.sku, name: p.name, price: n(p.price), cost: n(p.cost), taxRate: n(p.taxRate), unit: p.unit }))}
+      products={products.map((p) => ({ id: p.id, sku: p.sku, name: p.name, price: n(p.price), cost: ctx.restricted("deny:costs") ? 0 : n(p.cost), taxRate: n(p.taxRate), unit: p.unit }))}
       extra={defs.length > 0 && <CustomFieldInputs defs={defs} values={q.customFields as Record<string, unknown>} legend="Despacho y facturación" wide />}
       customer={{ id: q.customer.id, name: q.customer.name }} canCreateCustomer={ctx.can("crm.customers.write")} terms={terms} pricelists={pricelists} />
   );

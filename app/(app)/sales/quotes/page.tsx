@@ -9,6 +9,7 @@ import { BarChart } from "@/components/charts";
 import { money } from "@/lib/ui/format";
 import { dateWhere, parseList } from "@/lib/ui/list-query";
 import { applyDefaultFavorite, listFavorites } from "@/lib/ui/favorites";
+import { ownerScope } from "@/lib/core/scope";
 
 export const metadata = { title: "Cotizaciones" };
 const PAGE = 80;
@@ -33,7 +34,7 @@ export default async function Quotes({ searchParams }: PageProps<"/sales/quotes"
 
   // ── Filtros (todos combinables; los de estado se suman con O) ──
   const statusKeys = active.filter((k) => k.startsWith("status:")).map((k) => k.slice(7));
-  const where: Record<string, unknown> = {};
+  const where: Record<string, unknown> = { ...ownerScope(ctx, "sales") };
   if (statusKeys.length) where.status = { in: statusKeys };
   if (active.includes("mine")) where.ownerId = ctx.user.id;
   if (active.includes("open")) where.status = { in: statusKeys.length ? statusKeys : ["draft", "sent", "pending_approval", "approved"] };
@@ -54,7 +55,8 @@ export default async function Quotes({ searchParams }: PageProps<"/sales/quotes"
     ctx.db.product.findMany({ where: { id: { in: [...new Set(quotes.flatMap((x) => x.lines.map((l) => l.productId ?? "")))] } }, select: { id: true, cost: true } }),
     ctx.db.task.groupBy({ by: ["sourceId"], where: { sourceType: "quote", status: "OPEN", sourceId: { in: quotes.map((x) => x.id) } }, _count: true }),
   ]);
-  const cost = new Map(products.map((p) => [p.id, n(p.cost)]));
+  // Con costos ocultos no se calcula margen: ningún costo llega al navegador
+  const cost = new Map(ctx.restricted("deny:costs") ? [] : products.map((p) => [p.id, n(p.cost)]));
   const taskCount = new Map(tasks.map((t) => [t.sourceId, t._count]));
 
   const data = quotes.map((x) => {
@@ -105,8 +107,10 @@ export default async function Quotes({ searchParams }: PageProps<"/sales/quotes"
     { key: "subtotal", label: "Base", align: "right", optional: true, hidden: true, sum: true, width: "140px" },
     { key: "total", label: "Total", align: "right", sortable: true, sum: true, width: "140px" },
     { key: "status", label: "Estado", sortable: true, width: "180px" },
-    { key: "margin", label: "Margen", align: "right", sortable: true, optional: true, sum: true, width: "130px" },
-    { key: "marginPct", label: "Margen (%)", align: "right", sortable: true, optional: true, width: "104px" },
+    ...(ctx.restricted("deny:costs") ? [] : ([
+      { key: "margin", label: "Margen", align: "right", sortable: true, optional: true, sum: true, width: "130px" },
+      { key: "marginPct", label: "Margen (%)", align: "right", sortable: true, optional: true, width: "104px" },
+    ] as Column[])),
   ];
 
   let groups: Group[] | undefined;
@@ -172,7 +176,7 @@ export default async function Quotes({ searchParams }: PageProps<"/sales/quotes"
           <BarChart labels={months} series={[{ name: "Total", color: "#6f35b5", values: byMonth }]} format="money" />
         </section>
       ) : (
-        <DataTable storageKey="quotes" columns={columns} rows={paged.map(toRow)} groups={groups} moneyColumns={["total", "margin", "subtotal"]} />
+        <DataTable canExport={!ctx.restricted("deny:export")} storageKey="quotes" columns={columns} rows={paged.map(toRow)} groups={groups} moneyColumns={["total", "margin", "subtotal"]} />
       )}
     </>
   );

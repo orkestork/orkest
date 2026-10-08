@@ -21,7 +21,7 @@ export default async function Boms() {
           return (
             <Card key={b.id} title={<span className="flex items-center gap-2">{p?.name}<Badge tone={b.type === "KIT" ? "amber" : "violet"}>{b.type === "KIT" ? "Kit" : "Fabricar"}</Badge></span>}
               actions={b.type === "NORMAL" && ctx.can("manufacturing.write") ? <Link href={`/manufacturing/orders/new?productId=${b.productId}`} className={btn.small}>Producir</Link> : null}>
-              <p className="mb-2 text-xs text-slate-500">Produce {num(b.quantity)} {p?.unit} · costo de materiales ≈ {Math.round(cost).toLocaleString("es-CO")} c/u</p>
+              <p className="mb-2 text-xs text-slate-500">Produce {num(b.quantity)} {p?.unit}{!ctx.restricted("deny:costs") && <> · costo de materiales ≈ {Math.round(cost).toLocaleString("es-CO")} c/u</>}</p>
               <ul className="space-y-1 text-sm">{b.lines.map((l) => <li key={l.id} className="flex justify-between"><span>{products.get(l.componentId)?.name}</span><span className="text-slate-500">{num(l.quantity)} {products.get(l.componentId)?.unit}</span></li>)}</ul>
               {b.operations.length > 0 && <p className="mt-3 border-t border-slate-100 pt-2 text-xs text-slate-500">Ruta: {b.operations.map((o) => `${o.name} (${centers.get(o.workCenterId)}, ${o.durationMinutes} min)`).join(" → ")}</p>}
             </Card>

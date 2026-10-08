@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { prisma } from "./prisma";
 import { tenantDb, type TenantDb } from "./db";
 import { readSession } from "./auth";
-import { hasPermission } from "./permissions";
+import { hasPermission, isRestricted, type Restriction } from "./permissions";
 import { getModule } from "@/lib/modules/registry";
 
 /** Contexto mínimo para ejecutar lógica de negocio (requests, cron, seeds, API). */
@@ -30,6 +30,8 @@ export type OrgContext = ExecContext & {
   memberships: { orgId: string; orgName: string; roleName: string }[];
   can: (permission: string) => boolean;
   hasModule: (key: string) => boolean;
+  /** Restricción explícita del rol (ocultar costos, no exportar, solo sus registros…) */
+  restricted: (key: Restriction) => boolean;
 };
 
 export const getSessionUser = cache(async () => {
@@ -89,6 +91,7 @@ export const getContext = cache(async (): Promise<OrgContext | null> => {
     memberships: memberships.map((m) => ({ orgId: m.organizationId, orgName: m.organization.name, roleName: m.role.name })),
     can: (p) => hasPermission(permissions, p),
     hasModule: (k) => k === "core" || modules.has(k),
+    restricted: (k) => isRestricted(permissions, k),
   };
 });
 

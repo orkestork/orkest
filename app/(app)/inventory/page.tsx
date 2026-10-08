@@ -33,7 +33,7 @@ export default async function Inventory({ searchParams }: PageProps<"/inventory"
       <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-display text-4xl uppercase leading-none tracking-tight">Existencias</h1>
-          <p className="mt-2 text-sm text-stone-600">Valor a costo {money(value, ctx.org.currency)} · {warehouses.length} de {limit} almacenes · <Link href="/inventory/transfers?status=ready" className="underline">{pending} transferencias pendientes</Link></p>
+          <p className="mt-2 text-sm text-stone-600">{!ctx.restricted("deny:costs") && <>Valor a costo {money(value, ctx.org.currency)} · </>}{warehouses.length} de {limit} almacenes · <Link href="/inventory/transfers?status=ready" className="underline">{pending} transferencias pendientes</Link></p>
         </div>
         <div className="flex gap-2">
           <Link href="/inventory/warehouses" className={btn.secondary}>Administrar almacenes</Link>

@@ -150,7 +150,7 @@ export default async function Transfers({ searchParams }: PageProps<"/inventory/
         {opFilter && <Link href={whHref(wh)} className="ml-2 text-xs text-[var(--ork-violet)] underline">Quitar filtro de operación ({opById.get(opFilter)?.name})</Link>}
       </div>
 
-      <DataTable storageKey="transfers" columns={columns} rows={transfers.map(toRow)} groups={groups} />
+      <DataTable canExport={!ctx.restricted("deny:export")} storageKey="transfers" columns={columns} rows={transfers.map(toRow)} groups={groups} />
     </>
   );
 }

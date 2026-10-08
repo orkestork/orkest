@@ -56,7 +56,7 @@ export default async function ProductDetail({ params }: PageProps<"/products/[id
           const qty = quants.filter((q) => q.location.warehouseId === w.id && q.location.kind === "INTERNAL").reduce((s, q) => s + n(q.quantity), 0);
           return <li key={w.id} className="flex justify-between border-b border-stone-100 py-1"><span>{w.code} · {w.name}</span><span className="tabular-nums">{num(qty)} {p.unit}</span></li>;
         })}</ul>
-        <p className="mt-2 text-sm text-stone-600">Valor a costo: <b>{money(n(p.stock) * n(p.cost))}</b></p>
+        {!ctx.restricted("deny:costs") && <p className="mt-2 text-sm text-stone-600">Valor a costo: <b>{money(n(p.stock) * n(p.cost))}</b></p>}
       </div>
       <div><p className="mb-2 text-sm font-semibold">Reglas de reabastecimiento</p>
         {rules.length === 0 ? <p className="text-sm text-stone-500">Sin reglas. <Link href="/inventory/replenishment" className="text-[var(--ork-violet)] underline">Crear una</Link></p> : (
@@ -83,7 +83,7 @@ export default async function ProductDetail({ params }: PageProps<"/products/[id
             </div>
             {!p.active && <StatusPill label="Archivado" tone="slate" />}
           </div>
-          <ProductForm key={String(p.price) + String(p.cost) + p.name} product={p} defs={defs} suppliers={suppliers} categories={cats.map((c) => c.category!)} canWrite={ctx.can("products.write")}
+          <ProductForm key={String(p.price) + (ctx.restricted("deny:costs") ? "" : String(p.cost)) + p.name} hideCost={ctx.restricted("deny:costs")} product={ctx.restricted("deny:costs") ? { ...p, cost: 0 } : p} defs={defs} suppliers={suppliers} categories={cats.map((c) => c.category!)} canWrite={ctx.can("products.write")}
             salesTab={salesTab} purchaseTab={purchaseTab} inventoryTab={inventoryTab} />
         </div>
         <div className="xl:sticky xl:top-20 xl:max-h-[calc(100vh-6rem)] xl:overflow-y-auto xl:pr-1">

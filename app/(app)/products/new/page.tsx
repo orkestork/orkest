@@ -13,7 +13,7 @@ export default async function NewProduct() {
   return (
     <>
       <RecordTopBar listLabel="Productos" listHref="/products" title="Nuevo" />
-      <ProductForm canWrite defs={defs} suppliers={suppliers} categories={cats.map((c) => c.category!)}
+      <ProductForm canWrite hideCost={ctx.restricted("deny:costs")} defs={defs} suppliers={suppliers} categories={cats.map((c) => c.category!)}
         product={{ sku: "", name: "", category: null, unit: "UND", price: 0, cost: 0, minStock: 0, taxRate: 19, kind: "GOODS", invoicePolicy: "ORDER", defaultSupplierId: null, canBeSold: true, canBePurchased: true, customFields: {} }} />
     </>
   );

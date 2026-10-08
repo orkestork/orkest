@@ -23,6 +23,8 @@ export async function saveProductForm(_: ActionResult, form: FormData): Promise<
       canBeSold: form.get("canBeSold") === "on", canBePurchased: form.get("canBePurchased") === "on", customFields: cf.values,
     };
     const id = s(form, "id");
+    // Un rol con costos ocultos no ve el campo: se conserva el costo actual
+    if (ctx.restricted("deny:costs")) payload.cost = id ? String((await ctx.db.product.findUniqueOrThrow({ where: { id } })).cost) : 0;
     if (id) {
       await updateProduct(ctx, id, payload);
       revalidatePath(`/products/${id}`);

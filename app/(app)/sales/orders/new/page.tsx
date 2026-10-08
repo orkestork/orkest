@@ -26,7 +26,7 @@ export default async function NewSalesOrder() {
           <TaxModeToggle />
           <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-7">
             <Field label="Cliente *" className="sm:col-span-2"><RecordPicker name="customerId" label="Cliente" required search={lookupCustomers} create={ctx.can("crm.customers.write") ? quickCreateCustomer : undefined} placeholder="Nombre, NIT o teléfono…" /></Field>
-            <Field label="Vendedor"><select name="ownerId" defaultValue={ctx.user.id} className={input}>{people.map((p) => <option key={p.id} value={p.id}>{p.name}{p.active ? "" : " (sin acceso)"}</option>)}</select></Field>
+            <Field label="Vendedor"><select name="ownerId" defaultValue={ctx.user.id} className={input}>{people.filter((p) => !ctx.restricted("scope:own:sales") || p.id === ctx.user.id).map((p) => <option key={p.id} value={p.id}>{p.name}{p.active ? "" : " (sin acceso)"}</option>)}</select></Field>
             <Field label="Despachar desde"><select name="warehouseId" className={input}>{warehouses.map((w) => <option key={w.id} value={w.id}>{w.code} · {w.name}</option>)}</select></Field>
             <Field label="Lista de precios"><select name="pricelistId" className={input}><option value="">La del cliente</option>{pricelists.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></Field>
             <Field label="Plazo de pago"><select name="paymentTermId" className={input}><option value="">El del cliente</option>{terms.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></Field>

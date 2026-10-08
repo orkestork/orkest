@@ -25,6 +25,8 @@ export async function saveQuote(_: ActionResult, form: FormData): Promise<Action
     if (!cf.ok) return { error: Object.values(cf.errors).join(" · ") };
     const payload = { ...quotePayload(form), ...(defs.length ? { customFields: cf.values } : {}) };
     if (id) {
+      const q = await ctx.db.quote.findUnique({ where: { id }, select: { ownerId: true } });
+      if (!q || (ctx.restricted("scope:own:sales") && q.ownerId !== ctx.user.id)) return { error: "Cotización no encontrada" };
       await updateQuote(ctx, id, payload);
       revalidatePath(`/sales/quotes/${id}`);
       return { ok: "Cambios guardados" };

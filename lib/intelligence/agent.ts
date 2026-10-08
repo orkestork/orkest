@@ -46,6 +46,9 @@ export function buildTools(ctx: OrgContext) {
   const tools = [];
   const used: string[] = [];
   const track = <T,>(name: string, f: () => Promise<T>) => { used.push(name); return f(); };
+  // Restricciones del rol: alcance "solo sus pedidos" y costos ocultos
+  const own = ctx.restricted("scope:own:sales") ? { ownerId: ctx.user.id } : {};
+  const hideCost = ctx.restricted("deny:costs");
 
   if (can("sales", "sales.quotes.read")) {
     tools.push(betaZodTool({
@@ -57,11 +60,11 @@ export function buildTools(ctx: OrgContext) {
         limite: z.number().int().min(1).max(50).optional().describe("Máximo de grupos (por defecto 15), ordenados de mayor a menor"),
       }),
       run: (i) => track("ventas_resumen", async () => {
-        const where = { status: { not: "canceled" }, ...(range(i.desde, i.hasta) ? { createdAt: range(i.desde, i.hasta) } : {}) };
+        const where = { ...own, status: { not: "canceled" }, ...(range(i.desde, i.hasta) ? { createdAt: range(i.desde, i.hasta) } : {}) };
         const limit = i.limite ?? 15;
         const tot = await ctx.db.salesOrder.aggregate({ where, _sum: { total: true, subtotal: true }, _count: true });
         const total = { pedidos: tot._count, total: n(tot._sum.total), subtotal: n(tot._sum.subtotal) };
-        if (i.agrupar_por === "ninguno") return json({ total });
+        if (i.agrupar_por === "ninguno") return json({ total, ...(ctx.restricted("scope:own:sales") ? { nota: "Solo pedidos asignados a este usuario" } : {}) });
         if (i.agrupar_por === "producto") {
           const g = await ctx.db.salesOrderLine.groupBy({
             by: ["productId"], where: { order: { organizationId: ctx.orgId, ...where }, productId: { not: null } },
@@ -102,6 +105,7 @@ export function buildTools(ctx: OrgContext) {
       run: (i) => track("buscar_pedidos", async () => {
         const people = await orgPeople(ctx);
         const where = {
+          ...own,
           ...(i.cliente ? { customer: { name: ci(i.cliente) } } : {}),
           ...(i.numero ? { number: ci(i.numero) } : {}),
           ...(i.vendedor ? { ownerId: { in: people.filter((p) => p.name.toLowerCase().includes(i.vendedor!.toLowerCase())).map((p) => p.id) } } : {}),
@@ -124,7 +128,7 @@ export function buildTools(ctx: OrgContext) {
       description: "Detalle de un pedido de venta por número (ej. S27165): cliente, vendedor, líneas, totales, datos de despacho, entregas y facturas.",
       inputSchema: z.object({ numero: z.string() }),
       run: (i) => track("ver_pedido", async () => {
-        const o = await ctx.db.salesOrder.findFirst({ where: { number: { equals: i.numero.trim(), mode: "insensitive" } }, include: { customer: true, lines: true } });
+        const o = await ctx.db.salesOrder.findFirst({ where: { ...own, number: { equals: i.numero.trim(), mode: "insensitive" } }, include: { customer: true, lines: true } });
         if (!o) return json({ error: `No existe el pedido ${i.numero}` });
         const [people, deliveries, invoices] = await Promise.all([
           orgPeople(ctx),
@@ -154,8 +158,8 @@ export function buildTools(ctx: OrgContext) {
         const target = cs.length === 1 ? cs[0] : cs.find((c) => c.name.toLowerCase() === i.texto.toLowerCase());
         if (!target) return json({ varias_coincidencias: cs.map((c) => ({ nombre: c.name, ciudad: c.city, nit: c.taxId, ruta: `/crm/customers/${c.id}` })) });
         const [agg, last, open] = await Promise.all([
-          ctx.db.salesOrder.aggregate({ where: { customerId: target.id, status: { not: "canceled" } }, _sum: { total: true }, _count: true, _max: { createdAt: true } }),
-          ctx.db.salesOrder.findMany({ where: { customerId: target.id }, orderBy: { createdAt: "desc" }, take: 8, select: { id: true, number: true, createdAt: true, total: true, status: true } }),
+          ctx.db.salesOrder.aggregate({ where: { ...own, customerId: target.id, status: { not: "canceled" } }, _sum: { total: true }, _count: true, _max: { createdAt: true } }),
+          ctx.db.salesOrder.findMany({ where: { ...own, customerId: target.id }, orderBy: { createdAt: "desc" }, take: 8, select: { id: true, number: true, createdAt: true, total: true, status: true } }),
           ctx.hasModule("invoicing") ? ctx.db.invoice.findMany({ where: { customerId: target.id, balance: { gt: 0 }, status: { not: "void" } }, select: { id: true, number: true, balance: true, dueDate: true } }) : [],
         ]);
         return json({ cliente: { ...target, ruta: `/crm/customers/${target.id}` }, total_comprado: n(agg._sum.total), pedidos: agg._count, ultimo_pedido: day(agg._max.createdAt),
@@ -172,7 +176,7 @@ export function buildTools(ctx: OrgContext) {
       inputSchema: z.object({ texto: z.string().min(1), limite: z.number().int().min(1).max(20).optional() }),
       run: (i) => track("productos_buscar", async () => {
         const ps = await ctx.db.product.findMany({ where: { OR: [{ sku: ci(i.texto) }, { name: ci(i.texto) }] }, take: i.limite ?? 10, include: { quants: { include: { location: { select: { name: true } } } } } });
-        return json(ps.map((p) => ({ sku: p.sku, nombre: p.name, categoria: p.category, unidad: p.unit, precio: n(p.price), costo: n(p.cost), existencias: n(p.stock), minimo: n(p.minStock), activo: p.active,
+        return json(ps.map((p) => ({ sku: p.sku, nombre: p.name, categoria: p.category, unidad: p.unit, precio: n(p.price), ...(hideCost ? {} : { costo: n(p.cost) }), existencias: n(p.stock), minimo: n(p.minStock), activo: p.active,
           por_ubicacion: p.quants.filter((q) => n(q.quantity) !== 0).map((q) => ({ ubicacion: q.location.name, cantidad: n(q.quantity) })), ruta: `/products/${p.id}` })));
       }),
     }));

@@ -16,8 +16,10 @@ export type Group = { key: string; label: string; rows: Row[] };
 const minWidth = (cols: Column[]) => Math.max(900, 76 + cols.reduce((s, c) => s + (c.width ? parseInt(c.width, 10) || 120 : 220), 0));
 const fmtSum = (v: number, money: boolean) => (money ? v.toLocaleString("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }) : v.toLocaleString("es-CO"));
 
-export function DataTable({ storageKey, columns, rows, groups, moneyColumns = [] }: {
+export function DataTable({ storageKey, columns, rows, groups, moneyColumns = [], canExport = true }: {
   storageKey: string; columns: Column[]; rows: Row[]; groups?: Group[]; moneyColumns?: string[];
+  /** false si el rol tiene prohibido exportar */
+  canExport?: boolean;
 }) {
   const router = useRouter();
   const path = usePathname();
@@ -79,7 +81,7 @@ export function DataTable({ storageKey, columns, rows, groups, moneyColumns = []
       {selected.size > 0 && (
         <div className="flex items-center gap-3 border-b border-stone-200 bg-[var(--ork-lavender)]/20 px-4 py-2 text-sm">
           <span className="font-medium text-[var(--ork-purple)]">{selected.size} seleccionado(s)</span>
-          <button onClick={exportCsv} className="rounded-md border border-stone-300 bg-white px-2.5 py-1 text-xs font-medium hover:border-[var(--ork-violet)]">Exportar CSV</button>
+          {canExport && <button onClick={exportCsv} className="rounded-md border border-stone-300 bg-white px-2.5 py-1 text-xs font-medium hover:border-[var(--ork-violet)]">Exportar CSV</button>}
           <button onClick={() => setSelected(new Set())} className="text-xs text-stone-600 hover:underline">Quitar selección</button>
         </div>
       )}

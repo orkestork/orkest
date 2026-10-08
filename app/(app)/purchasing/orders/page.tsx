@@ -164,7 +164,7 @@ export default async function PurchaseOrders({ searchParams }: PageProps<"/purch
         {segDef && <p className="mt-3 text-xs text-stone-600">Mostrando: <b>{mine ? "mis " : ""}{segDef.label.toLowerCase()}</b> · <Link href="/purchasing/orders" className="text-[var(--ork-violet)] underline">ver todas</Link></p>}
       </section>
 
-      <DataTable storageKey="purchase-orders" columns={columns} rows={(group ? rows : rows.slice((page - 1) * PAGE, page * PAGE)).map(toRow)} groups={groups} moneyColumns={["total"]} />
+      <DataTable canExport={!ctx.restricted("deny:export")} storageKey="purchase-orders" columns={columns} rows={(group ? rows : rows.slice((page - 1) * PAGE, page * PAGE)).map(toRow)} groups={groups} moneyColumns={["total"]} />
       <p className="mt-2 text-xs text-stone-500">Recibidas a tiempo: compara la última recepción con la llegada prevista ({received.length} órdenes evaluadas).</p>
     </>
   );

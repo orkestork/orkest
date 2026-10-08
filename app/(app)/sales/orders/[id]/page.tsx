@@ -13,12 +13,13 @@ import { saveSalesOrderFields, soAction } from "../../order-actions";
 import { CustomFieldInputs, CustomFieldValues } from "@/components/custom-fields";
 import { getFieldDefs } from "@/lib/core/custom-fields";
 import { orgPeople } from "@/lib/core/members";
+import { canSeeOwned } from "@/lib/core/scope";
 
 export default async function SalesOrderDetail({ params }: PageProps<"/sales/orders/[id]">) {
   const ctx = await requireModule("sales", "sales.quotes.read");
   const { id } = await params;
   const so = await ctx.db.salesOrder.findUnique({ where: { id }, include: { customer: true, lines: true } });
-  if (!so) notFound();
+  if (!so || !canSeeOwned(ctx, "sales", so.ownerId)) notFound();
   const [deliveries, invoices, term, pricelist, quote, defs, people] = await Promise.all([
     ctx.db.transfer.findMany({ where: { sourceType: "sales_order", sourceId: so.id }, orderBy: { createdAt: "asc" } }),
     ctx.hasModule("invoicing") ? ctx.db.invoice.findMany({ where: { salesOrderId: so.id }, orderBy: { issuedAt: "asc" } }) : [],

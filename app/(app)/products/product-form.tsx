@@ -19,8 +19,8 @@ function Row({ label, children, hint }: { label: string; children: ReactNode; hi
 }
 
 /** Ficha editable del producto (estilo Odoo) — se usa para crear y editar. */
-export function ProductForm({ product, categories, suppliers, defs, canWrite, salesTab, purchaseTab, inventoryTab }: {
-  product: P; categories: string[]; suppliers: { id: string; name: string }[]; defs: (FieldDef & { id: string })[]; canWrite: boolean;
+export function ProductForm({ product, categories, suppliers, defs, canWrite, salesTab, purchaseTab, inventoryTab, hideCost }: {
+  product: P; categories: string[]; suppliers: { id: string; name: string }[]; defs: (FieldDef & { id: string })[]; canWrite: boolean; hideCost?: boolean;
   salesTab?: ReactNode; purchaseTab?: ReactNode; inventoryTab?: ReactNode;
 }) {
   const num = (v: unknown) => (v === null || v === undefined ? "" : String(Number(v)));
@@ -60,7 +60,7 @@ export function ProductForm({ product, categories, suppliers, defs, canWrite, sa
               <div className="space-y-3">
                 <Row label="Precio de venta"><input name="price" type="number" step="any" min="0" defaultValue={num(product.price)} className={`${field} text-right`} /></Row>
                 <Row label="Impuesto (IVA %)"><input name="taxRate" type="number" step="any" min="0" max="100" defaultValue={num(product.taxRate)} className={`${field} text-right`} /></Row>
-                <Row label="Costo" hint="Se usa para margen, valor de inventario y reabastecimiento."><input name="cost" type="number" step="any" min="0" defaultValue={num(product.cost)} className={`${field} text-right`} /></Row>
+                {!hideCost && <Row label="Costo" hint="Se usa para margen, valor de inventario y reabastecimiento."><input name="cost" type="number" step="any" min="0" defaultValue={num(product.cost)} className={`${field} text-right`} /></Row>}
                 {!product.id && <Row label="Existencia inicial" hint="Entra como ajuste al almacén principal."><input name="stock" type="number" step="any" min="0" className={`${field} text-right`} /></Row>}
               </div>
               {defs.length > 0 && <div className="md:col-span-2"><CustomFieldInputs defs={defs} values={(product.customFields ?? {}) as Record<string, unknown>} /></div>}

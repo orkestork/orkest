@@ -4,7 +4,9 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/core/prisma";
 import { actionContext } from "@/lib/core/context";
 import { hashPassword } from "@/lib/core/auth";
-import { hasPermission } from "@/lib/core/permissions";
+import { hasPermission, isRestrictionKey } from "@/lib/core/permissions";
+import { buildCatalog, permissionsFromForm } from "@/lib/core/permission-catalog";
+import { BASE_ROLES } from "@/lib/templates/industries";
 import { audit } from "@/lib/core/notify";
 import { generateApiKey } from "@/lib/core/api-auth";
 import { attemptDelivery, newWebhookSecret } from "@/lib/core/webhooks";
@@ -85,25 +87,38 @@ export async function updateMembership(form: FormData) {
 export async function saveRole(_: ActionResult, form: FormData): Promise<ActionResult> {
   return safeAction(async () => {
     const ctx = await actionContext("org.roles.manage");
-    const permissions = form.getAll("permissions").map(String);
-    // Nadie puede otorgar permisos que no tiene (anti-escalamiento)
-    const escalated = permissions.filter((p) => !hasPermission(ctx.permissions, p));
-    if (escalated.length) return { error: `No puedes otorgar permisos que no tienes: ${escalated.join(", ")}` };
     const id = s(form, "id");
-    if (id) {
-      const role = await ctx.db.role.findUniqueOrThrow({ where: { id } });
-      if (role.isSystem) return { error: "El rol Propietario no se puede modificar" };
-      await ctx.db.role.update({ where: { id }, data: { name: s(form, "name") || role.name, permissions } });
+    const existing = id ? await ctx.db.role.findUniqueOrThrow({ where: { id } }) : null;
+    if (existing?.isSystem) return { error: "El rol Propietario no se puede modificar" };
+    const customs = await ctx.db.customEntity.findMany({ where: { active: true }, select: { key: true, labelPlural: true } });
+    const catalog = buildCatalog(ctx.modules, customs);
+    const permissions = permissionsFromForm(form, catalog, existing?.permissions ?? []);
+    // Nadie puede otorgar permisos que no tiene (anti-escalamiento). Las restricciones solo quitan poder.
+    const escalated = permissions.filter((p) => !isRestrictionKey(p) && !hasPermission(ctx.permissions, p));
+    if (escalated.length) return { error: `No puedes otorgar permisos que no tienes: ${escalated.join(", ")}` };
+    const name = s(form, "name"), description = s(form, "description") || null;
+    if (existing) {
+      await ctx.db.role.update({ where: { id: existing.id }, data: { name: name || existing.name, description, permissions } });
     } else {
-      const key = s(form, "key").toUpperCase().replace(/[^A-Z0-9_]/g, "_");
-      if (!key || !s(form, "name")) return { error: "Clave y nombre son obligatorios" };
-      if (await ctx.db.role.findFirst({ where: { key } })) return { error: "Ya existe un rol con esa clave" };
-      await ctx.db.role.create({ data: { organizationId: ctx.orgId, key, name: s(form, "name"), permissions } });
+      const key = (s(form, "key") || name).toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Z0-9]+/g, "_").replace(/^_|_$/g, "");
+      if (!key || !name) return { error: "El nombre es obligatorio" };
+      if (await ctx.db.role.findFirst({ where: { key } })) return { error: `Ya existe un rol con la clave ${key}` };
+      await ctx.db.role.create({ data: { organizationId: ctx.orgId, key, name, description, permissions } });
     }
     await audit(ctx, "RoleSaved", "role", id || null, { permissions });
     revalidatePath("/settings/roles");
     return { ok: "Rol guardado" };
   });
+}
+
+export async function deleteRole(form: FormData) {
+  const ctx = await actionContext("org.roles.manage");
+  const role = await ctx.db.role.findUniqueOrThrow({ where: { id: s(form, "id") }, include: { _count: { select: { memberships: true } } } });
+  if (role.isSystem || BASE_ROLES.some((b) => b.key === role.key)) throw new Error("Los roles base no se eliminan (los flujos de aprobación los usan); puedes ajustar sus permisos");
+  if (role._count.memberships) throw new Error("Reasigna primero a los usuarios de este rol");
+  await ctx.db.role.delete({ where: { id: role.id } });
+  await audit(ctx, "RoleDeleted", "role", role.id, { key: role.key });
+  revalidatePath("/settings/roles");
 }
 
 export async function toggleModule(form: FormData) {

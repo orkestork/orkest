@@ -12,6 +12,7 @@ import { fieldOptions, formatFieldValue, getFieldDefs } from "@/lib/core/custom-
 import { customCondition, dateWhere, parseList, type FieldKind, type ListField } from "@/lib/ui/list-query";
 import { customJsonCondition } from "@/lib/ui/list-query-server";
 import { applyDefaultFavorite, listFavorites } from "@/lib/ui/favorites";
+import { ownerScope } from "@/lib/core/scope";
 
 export const metadata = { title: "Pedidos de venta" };
 const PAGE = 80;
@@ -59,7 +60,8 @@ export default async function SalesOrders({ searchParams }: PageProps<"/sales/or
 
   // ── Filtros predefinidos (combinables; los de estado se suman con O) ──
   const statusKeys = active.filter((k) => k.startsWith("status:")).map((k) => k.slice(7));
-  const where: Prisma.SalesOrderWhereInput = {};
+  // Alcance del rol: un vendedor restringido solo ve los pedidos que tiene asignados
+  const where: Prisma.SalesOrderWhereInput = { ...ownerScope(ctx, "sales") };
   const and: Prisma.SalesOrderWhereInput[] = [];
   if (statusKeys.length) where.status = { in: statusKeys };
   if (active.includes("mine")) where.ownerId = ctx.user.id;
@@ -118,7 +120,8 @@ export default async function SalesOrders({ searchParams }: PageProps<"/sales/or
     ctx.db.product.findMany({ where: { id: { in: productIds } }, select: { id: true, cost: true } }),
     ctx.db.task.groupBy({ by: ["sourceId"], where: { sourceType: "sales_order", status: "OPEN", sourceId: { in: orders.map((o) => o.id) } }, _count: true }),
   ]);
-  const cost = new Map(products.map((p) => [p.id, n(p.cost)]));
+  // Con costos ocultos no se calcula margen: ningún costo llega al navegador
+  const cost = new Map(ctx.restricted("deny:costs") ? [] : products.map((p) => [p.id, n(p.cost)]));
   const taskCount = new Map(tasks.map((t) => [t.sourceId, t._count]));
 
   const data = orders.map((o) => {
@@ -169,8 +172,10 @@ export default async function SalesOrders({ searchParams }: PageProps<"/sales/or
     { key: "status", label: "Estado", sortable: true, width: "130px" },
     { key: "tax", label: "IVA", optional: true, width: "100px" },
     ...listDefs.map((f): Column => ({ key: `cf_${f.key}`, label: f.label, optional: true, width: "150px" })),
-    { key: "margin", label: "Margen", align: "right", optional: true, hidden: true, sum: true, width: "130px" },
-    { key: "marginPct", label: "Margen (%)", align: "right", optional: true, hidden: true, width: "104px" },
+    ...(ctx.restricted("deny:costs") ? [] : ([
+      { key: "margin", label: "Margen", align: "right", optional: true, hidden: true, sum: true, width: "130px" },
+      { key: "marginPct", label: "Margen (%)", align: "right", optional: true, hidden: true, width: "104px" },
+    ] as Column[])),
   ];
 
   let groups: Group[] | undefined;
@@ -234,7 +239,7 @@ export default async function SalesOrders({ searchParams }: PageProps<"/sales/or
       ) : (
         <>
           {group && total > GROUP_LIMIT && <p className="mb-2 text-xs text-stone-600">Agrupando los {GROUP_LIMIT.toLocaleString("es-CO")} pedidos más recientes de {total.toLocaleString("es-CO")}. Usa filtros para acotar.</p>}
-          <DataTable storageKey="sales-orders" columns={columns} rows={group ? [] : data.map(toRow)} groups={groups} moneyColumns={["total", "margin", "subtotal"]} />
+          <DataTable canExport={!ctx.restricted("deny:export")} storageKey="sales-orders" columns={columns} rows={group ? [] : data.map(toRow)} groups={groups} moneyColumns={["total", "margin", "subtotal"]} />
         </>
       )}
     </>
