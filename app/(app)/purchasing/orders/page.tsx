@@ -101,7 +101,8 @@ export default async function PurchaseOrders({ searchParams }: PageProps<"/purch
   ];
   let groups: Group[] | undefined;
   if (group) {
-    const gk = (p: Po) => (group === "supplier" ? p.supplier.name : group === "owner" ? um.get(p.ownerId ?? "") ?? "Sin comprador" : stateOf.get(p.status)?.label ?? p.status);
+    const gk1 = (g: string, p: Po) => (g === "supplier" ? p.supplier.name : g === "owner" ? um.get(p.ownerId ?? "") ?? "Sin comprador" : stateOf.get(p.status)?.label ?? p.status);
+    const gk = (p: Po) => group.split(",").map((g) => gk1(g, p)).join("  ›  ");
     const m = new Map<string, Po[]>();
     for (const p of rows) m.set(gk(p), [...(m.get(gk(p)) ?? []), p]);
     groups = [...m.entries()].map(([label, ps]) => ({ key: label, label, rows: ps.map(toRow) }));

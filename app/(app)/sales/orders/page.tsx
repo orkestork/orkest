@@ -9,6 +9,9 @@ import { money } from "@/lib/ui/format";
 import { DELIVERY_STATUS, INVOICE_STATUS } from "@/lib/ui/sales-labels";
 import type { Prisma } from "@/lib/generated/prisma/client";
 import { fieldOptions, formatFieldValue, getFieldDefs } from "@/lib/core/custom-fields";
+import { customCondition, dateWhere, parseList, type FieldKind, type ListField } from "@/lib/ui/list-query";
+import { customJsonCondition } from "@/lib/ui/list-query-server";
+import { applyDefaultFavorite, listFavorites } from "@/lib/ui/favorites";
 
 export const metadata = { title: "Pedidos de venta" };
 const PAGE = 80;
@@ -22,51 +25,87 @@ const monthShort = (d: Date) => d.toLocaleDateString("es-CO", { month: "short", 
 export default async function SalesOrders({ searchParams }: PageProps<"/sales/orders">) {
   const ctx = await requireModule("sales", "sales.quotes.read");
   const sp = await searchParams;
-  const str = (k: string) => (typeof sp[k] === "string" ? (sp[k] as string) : "");
+  const [wf, users, defs, favorites] = await Promise.all([getWorkflow(ctx.db, "sales_order"), orgUsers(ctx), getFieldDefs(ctx.db, "sales_order"), listFavorites(ctx, "sales_order")]);
+  applyDefaultFavorite(favorites, Object.keys(sp).length === 0, "/sales/orders");
+  const L = parseList(sp, "number");
   // Compatibilidad con enlaces antiguos (?filter=to_deliver|to_invoice)
-  const legacy = str("filter") === "to_deliver" ? "deliver" : str("filter") === "to_invoice" ? "invoice" : "";
-  const active = [...str("f").split(","), legacy].filter(Boolean);
-  const view = str("view") || "list";
+  const legacy = sp.filter === "to_deliver" ? "deliver" : sp.filter === "to_invoice" ? "invoice" : "";
+  const active = [...L.filters, legacy].filter(Boolean);
+  const view = L.view;
 
-  const [wf, users, defs] = await Promise.all([getWorkflow(ctx.db, "sales_order"), orgUsers(ctx), getFieldDefs(ctx.db, "sales_order")]);
   // Campos de Studio que se pueden filtrar (listas y sí/no) y mostrar como columnas
   const listDefs = defs.filter((d) => ["select", "boolean", "text", "user"].includes(d.type));
   const filterDefs = defs.filter((d) => d.type === "select" || d.type === "boolean");
   const states = wf?.states ?? [];
   const stateOf = new Map(states.map((s) => [s.key, s]));
   const um = new Map(users.map((u) => [u.id, u.name]));
+  const opts = (r: Record<string, { label: string }>) => Object.entries(r).map(([value, v]) => ({ value, label: v.label }));
+  const kindOf = (t: string): FieldKind => (t === "number" || t === "currency" ? "number" : t === "date" || t === "datetime" ? "date" : t === "select" ? "select" : t === "boolean" ? "boolean" : "text");
 
-  // ── Filtros (combinables; los de estado se suman con O) ──
+  // ── Campos para filtro y agrupación personalizados ──
+  const fields: ListField[] = [
+    { key: "number", label: "Número", kind: "text" },
+    { key: "customer", label: "Cliente", kind: "text", groupable: true },
+    { key: "createdAt", label: "Fecha", kind: "date" },
+    { key: "commitmentAt", label: "Fecha compromiso", kind: "date" },
+    { key: "total", label: "Total", kind: "number" },
+    { key: "subtotal", label: "Base", kind: "number" },
+    { key: "status", label: "Estado", kind: "select", options: states.map((st) => ({ value: st.key, label: st.label })), groupable: true },
+    { key: "deliveryStatus", label: "Entrega", kind: "select", options: opts(DELIVERY_STATUS), groupable: true },
+    { key: "invoiceStatus", label: "Facturación", kind: "select", options: opts(INVOICE_STATUS), groupable: true },
+    { key: "taxExempt", label: "Sin IVA", kind: "boolean", groupable: true },
+    ...defs.map((d): ListField => ({ key: `cf_${d.key}`, label: d.label, kind: kindOf(d.type), options: d.type === "select" ? fieldOptions(d) : undefined, groupable: d.type === "select" || d.type === "boolean" })),
+  ];
+
+  // ── Filtros predefinidos (combinables; los de estado se suman con O) ──
   const statusKeys = active.filter((k) => k.startsWith("status:")).map((k) => k.slice(7));
   const where: Prisma.SalesOrderWhereInput = {};
+  const and: Prisma.SalesOrderWhereInput[] = [];
   if (statusKeys.length) where.status = { in: statusKeys };
   if (active.includes("mine")) where.ownerId = ctx.user.id;
   if (active.includes("deliver")) { where.status = { in: statusKeys.length ? statusKeys : ["confirmed"] }; where.deliveryStatus = { not: "full" }; }
   if (active.includes("invoice")) where.invoiceStatus = "to_invoice";
-  if (active.includes("month")) { const d = new Date(); d.setDate(1); d.setHours(0, 0, 0, 0); where.createdAt = { gte: d }; }
-  if (active.includes("taxed")) where.taxExempt = false;
-  if (active.includes("exempt")) where.taxExempt = true;
+  if (active.includes("taxed") !== active.includes("exempt")) where.taxExempt = active.includes("exempt");
   // Filtros por campos de Studio: cf:<campo>=<valor> (mismo campo → O, distintos campos → Y)
   const cfFilters = new Map<string, string[]>();
   for (const k of active.filter((x) => x.startsWith("cf:"))) { const [key, value] = k.slice(3).split("="); cfFilters.set(key, [...(cfFilters.get(key) ?? []), value]); }
-  const cfAnd: Prisma.SalesOrderWhereInput[] = [];
   for (const [key, values] of cfFilters) {
     const def = filterDefs.find((d) => d.key === key);
-    if (!def) continue;
-    const parsed = values.map((v) => (def.type === "boolean" ? v === "true" : v));
-    cfAnd.push({ OR: parsed.map((v) => ({ customFields: { path: [key], equals: v } })) });
+    if (def) and.push({ OR: values.map((v) => ({ customFields: { path: [key], equals: def.type === "boolean" ? v === "true" : v } })) });
   }
-  if (cfAnd.length) where.AND = cfAnd;
-  if (active.includes("30d")) { const d = new Date(); d.setDate(d.getDate() - 30); where.createdAt = { gte: d }; }
-  const q = str("q");
-  if (q) where.OR = [{ number: { contains: q, mode: "insensitive" } }, { customer: { name: { contains: q, mode: "insensitive" } } }];
+  // ── Fechas (meses / trimestres / años) ──
+  and.push(...(dateWhere(L.dates, (f) => (["createdAt", "commitmentAt"].includes(f) ? f : null)) as Prisma.SalesOrderWhereInput[]));
+  // ── Búsqueda por campo ("Buscar Cliente por: …"); valores del mismo campo → O ──
+  const ci = (v: string) => ({ contains: v, mode: "insensitive" as const });
+  const matchUsers = (v: string) => users.filter((u) => u.name.toLowerCase().includes(v.toLowerCase())).map((u) => u.id);
+  // Producto: por referencia o nombre (también líneas sin producto, por descripción)
+  const prodIds = new Map<string, string[]>();
+  for (const v of L.search.get("product") ?? []) prodIds.set(v, (await ctx.db.product.findMany({ where: { OR: [{ sku: ci(v) }, { name: ci(v) }] }, select: { id: true }, take: 500 })).map((p) => p.id));
+  const searchBy: Record<string, (v: string) => Prisma.SalesOrderWhereInput> = {
+    number: (v) => ({ number: ci(v) }),
+    customer: (v) => ({ customer: { name: ci(v) } }),
+    owner: (v) => ({ ownerId: { in: matchUsers(v) } }),
+    product: (v) => ({ lines: { some: { OR: [{ productId: { in: prodIds.get(v) ?? [] } }, { description: ci(v) }] } } }),
+    ...Object.fromEntries(defs.filter((d) => ["text", "select"].includes(d.type)).map((d) => [`cf_${d.key}`, (v: string) => ({ customFields: { path: [d.key], string_contains: v } })])),
+  };
+  for (const [k, values] of L.search) if (searchBy[k]) and.push({ OR: values.map(searchBy[k]) });
+  // ── Filtros personalizados ──
+  for (const c of L.custom) {
+    const f = fields.find((x) => x.key === c.field);
+    if (!f) continue;
+    if (f.key.startsWith("cf_")) { const w = customJsonCondition(f.key.slice(3), f.kind, c.op, c.value); if (w) and.push(w as Prisma.SalesOrderWhereInput); continue; }
+    const cond = customCondition(f.kind, c.op, c.value);
+    if (cond === undefined) continue;
+    and.push(f.key === "customer" ? { customer: { name: cond as Prisma.StringFilter } } : ({ [f.key]: cond } as Prisma.SalesOrderWhereInput));
+  }
+  if (and.length) where.AND = and;
 
   // ── Orden y página (en la base: hay organizaciones con miles de pedidos) ──
-  const sort = str("sort") || "createdAt", dir: Prisma.SortOrder = str("dir") === "asc" ? "asc" : "desc";
+  const sort = L.sort || "createdAt", dir: Prisma.SortOrder = L.dir;
   const orderBy: Prisma.SalesOrderOrderByWithRelationInput =
     sort === "customer" ? { customer: { name: dir } } : ["number", "total", "status", "commitmentAt", "deliveryStatus", "invoiceStatus"].includes(sort) ? { [sort]: dir } : { createdAt: dir };
-  const page = Math.max(1, Number(str("page")) || 1);
-  const group = str("group");
+  const page = L.page;
+  const group = L.groups.join(",");
   const [total, orders] = await Promise.all([
     ctx.db.salesOrder.count({ where }),
     ctx.db.salesOrder.findMany({
@@ -141,7 +180,11 @@ export default async function SalesOrders({ searchParams }: PageProps<"/sales/or
       delivery: (d) => DELIVERY_STATUS[d.o.deliveryStatus]?.label ?? d.o.deliveryStatus, invoice: (d) => INVOICE_STATUS[d.o.invoiceStatus]?.label ?? d.o.invoiceStatus,
       month: (d) => monthKey(d.o.createdAt),
     };
-    const f = gk[group] ?? gk.status;
+    for (const d of defs) gk[`cf_${d.key}`] = (x) => String(formatFieldValue(d, cfOf(x)[d.key], um));
+    gk.taxExempt = (x) => (x.o.taxExempt ? "Sin IVA" : "Con IVA");
+    gk.deliveryStatus = gk.delivery; gk.invoiceStatus = gk.invoice;
+    // Varios niveles: "Confirmado › ATEMPO…"
+    const f = (x: (typeof data)[number]) => L.groups.map((g) => (gk[g] ?? gk.status)(x)).join("  ›  ");
     const map = new Map<string, typeof data>();
     for (const d of data) map.set(f(d), [...(map.get(f(d)) ?? []), d]);
     groups = [...map.entries()].map(([label, ds]) => ({ key: label, label, rows: ds.map(toRow) }));
@@ -162,11 +205,14 @@ export default async function SalesOrders({ searchParams }: PageProps<"/sales/or
   return (
     <>
       <ControlPanel
+        entityType="sales_order" favorites={favorites} fields={fields}
+        searchFields={[{ key: "number", label: "Número" }, { key: "customer", label: "Cliente" }, { key: "owner", label: "Vendedor" }, { key: "product", label: "Producto" },
+          ...defs.filter((d) => ["text", "select"].includes(d.type)).map((d) => ({ key: `cf_${d.key}`, label: d.label }))]}
+        dateFields={[{ key: "createdAt", label: "Fecha" }, { key: "commitmentAt", label: "Fecha compromiso" }]}
         title="Pedidos" newHref={ctx.can("sales.quotes.write") ? "/sales/orders/new" : undefined}
         filters={[
           { group: "propias", options: [{ key: "mine", label: "Mis pedidos" }, { key: "deliver", label: "Por entregar" }, { key: "invoice", label: "Por facturar" }] },
           { group: "estado", options: states.map((s) => ({ key: `status:${s.key}`, label: s.label })) },
-          { group: "fecha", options: [{ key: "month", label: "Este mes" }, { key: "30d", label: "Últimos 30 días" }] },
           { group: "iva", options: [{ key: "taxed", label: "Con IVA" }, { key: "exempt", label: "Sin IVA" }] },
           ...filterDefs.map((f) => ({
             group: f.label,

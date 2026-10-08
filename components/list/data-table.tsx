@@ -12,6 +12,8 @@ export type Column = { key: string; label: string; align?: "right" | "center"; s
 export type Row = { id: string; href: string; cells: Record<string, ReactNode>; raw: Record<string, string | number> };
 export type Group = { key: string; label: string; rows: Row[] };
 
+/** Ancho mínimo de la tabla: columnas fijas + 220 px por columna flexible (p. ej. Cliente), para que nunca se aplasten. */
+const minWidth = (cols: Column[]) => Math.max(900, 76 + cols.reduce((s, c) => s + (c.width ? parseInt(c.width, 10) || 120 : 220), 0));
 const fmtSum = (v: number, money: boolean) => (money ? v.toLocaleString("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }) : v.toLocaleString("es-CO"));
 
 export function DataTable({ storageKey, columns, rows, groups, moneyColumns = [] }: {
@@ -82,7 +84,7 @@ export function DataTable({ storageKey, columns, rows, groups, moneyColumns = []
         </div>
       )}
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[900px] table-fixed text-sm">
+        <table className="w-full table-fixed text-sm" style={{ minWidth: minWidth(cols) }}>
           <colgroup><col className="w-10" />{cols.map((c) => <col key={c.key} style={c.width ? { width: c.width } : undefined} />)}<col className="w-9" /></colgroup>
           <thead>
             <tr className="border-b border-stone-200 text-left text-[13px] font-semibold text-stone-800">

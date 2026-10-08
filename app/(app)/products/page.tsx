@@ -65,7 +65,8 @@ export default async function Products({ searchParams }: PageProps<"/products">)
   const group = str("group");
   let groups: Group[] | undefined;
   if (group) {
-    const gk = (p: (typeof products)[number]) => (group === "kind" ? KIND[p.kind]?.label ?? p.kind : p.category ?? "Sin categoría");
+    const gk1 = (g: string, p: (typeof products)[number]) => (g === "kind" ? KIND[p.kind]?.label ?? p.kind : p.category ?? "Sin categoría");
+    const gk = (p: (typeof products)[number]) => group.split(",").map((g) => gk1(g, p)).join("  ›  ");
     const map = new Map<string, typeof products>();
     for (const p of products) map.set(gk(p), [...(map.get(gk(p)) ?? []), p]);
     groups = [...map.entries()].map(([label, ps]) => ({ key: label, label, rows: ps.map(toRow) }));

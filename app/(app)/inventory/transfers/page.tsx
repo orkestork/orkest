@@ -84,12 +84,14 @@ export default async function Transfers({ searchParams }: PageProps<"/inventory/
   const group = str("group");
   let groups: Group[] | undefined;
   if (group) {
-    const gk = (t: (typeof transfers)[number]) => {
+    const gk1 = (g: string, t: (typeof transfers)[number]) => {
       const op = opById.get(t.operationTypeId);
-      if (group === "warehouse") return whById.get(op?.warehouseId ?? "")?.name ?? "Otro";
-      if (group === "kind") return OP_KIND[op?.kind ?? ""] ?? "Otro";
+      if (g === "warehouse") return whById.get(op?.warehouseId ?? "")?.name ?? "Otro";
+      if (g === "kind") return OP_KIND[op?.kind ?? ""] ?? "Otro";
       return TRANSFER_STATUS[t.status]?.label ?? t.status;
     };
+    // Varios niveles: group=warehouse,kind → "Almacén › Tipo"
+    const gk = (t: (typeof transfers)[number]) => group.split(",").map((g) => gk1(g, t)).join("  ›  ");
     const map = new Map<string, typeof transfers>();
     for (const t of transfers) map.set(gk(t), [...(map.get(gk(t)) ?? []), t]);
     groups = [...map.entries()].map(([label, ts]) => ({ key: label, label, rows: ts.map(toRow) }));

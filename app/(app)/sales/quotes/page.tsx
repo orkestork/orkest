@@ -7,6 +7,8 @@ import { DataTable, type Column, type Group, type Row } from "@/components/list/
 import { Avatar, StatusPill } from "@/components/list/status-pill";
 import { BarChart } from "@/components/charts";
 import { money } from "@/lib/ui/format";
+import { dateWhere, parseList } from "@/lib/ui/list-query";
+import { applyDefaultFavorite, listFavorites } from "@/lib/ui/favorites";
 
 export const metadata = { title: "Cotizaciones" };
 const PAGE = 80;
@@ -22,7 +24,9 @@ export default async function Quotes({ searchParams }: PageProps<"/sales/quotes"
   const active = str("f").split(",").filter(Boolean);
   const view = str("view") || "list";
 
-  const [wf, users] = await Promise.all([getWorkflow(ctx.db, "quote"), orgUsers(ctx)]);
+  const [wf, users, favorites] = await Promise.all([getWorkflow(ctx.db, "quote"), orgUsers(ctx), listFavorites(ctx, "quote")]);
+  applyDefaultFavorite(favorites, Object.keys(sp).length === 0, "/sales/quotes");
+  const L = parseList(sp, "number");
   const states = wf?.states ?? [];
   const stateOf = new Map(states.map((s) => [s.key, s]));
   const um = new Map(users.map((u) => [u.id, u.name]));
@@ -35,8 +39,15 @@ export default async function Quotes({ searchParams }: PageProps<"/sales/quotes"
   if (active.includes("open")) where.status = { in: statusKeys.length ? statusKeys : ["draft", "sent", "pending_approval", "approved"] };
   if (active.includes("month")) { const d = new Date(); d.setDate(1); d.setHours(0, 0, 0, 0); where.createdAt = { gte: d }; }
   if (active.includes("30d")) where.createdAt = { gte: new Date(Date.now() - 30 * DAY) };
-  const q = str("q");
-  if (q) where.OR = [{ number: { contains: q, mode: "insensitive" } }, { customer: { name: { contains: q, mode: "insensitive" } } }];
+  // Búsqueda por campo (valores del mismo campo → O) y fechas
+  const ci = (v: string) => ({ contains: v, mode: "insensitive" as const });
+  const searchBy: Record<string, (v: string) => Record<string, unknown>> = {
+    number: (v) => ({ number: ci(v) }), customer: (v) => ({ customer: { name: ci(v) } }),
+    owner: (v) => ({ ownerId: { in: users.filter((u) => u.name.toLowerCase().includes(v.toLowerCase())).map((u) => u.id) } }),
+  };
+  const and: Record<string, unknown>[] = [...dateWhere(L.dates, (f) => (f === "createdAt" ? f : null))];
+  for (const [k, values] of L.search) if (searchBy[k]) and.push({ OR: values.map(searchBy[k]) });
+  if (and.length) where.AND = and;
 
   const quotes = await ctx.db.quote.findMany({ where, include: { customer: true, lines: true }, orderBy: { createdAt: "desc" }, take: 2000 });
   const [products, tasks] = await Promise.all([
@@ -104,7 +115,7 @@ export default async function Quotes({ searchParams }: PageProps<"/sales/quotes"
       customer: (d) => d.x.customer.name, owner: (d) => d.owner || "Sin vendedor",
       status: (d) => stateOf.get(d.x.status)?.label ?? d.x.status, month: (d) => monthKey(d.x.createdAt),
     };
-    const f = gk[group] ?? gk.status;
+    const f = (d: (typeof data)[number]) => group.split(",").map((g) => (gk[g] ?? gk.status)(d)).join("  ›  ");
     const map = new Map<string, typeof data>();
     for (const d of data) map.set(f(d), [...(map.get(f(d)) ?? []), d]);
     groups = [...map.entries()].map(([label, ds]) => ({ key: label, label, rows: ds.map(toRow) }));
@@ -118,6 +129,9 @@ export default async function Quotes({ searchParams }: PageProps<"/sales/quotes"
   return (
     <>
       <ControlPanel
+        entityType="quote" favorites={favorites}
+        searchFields={[{ key: "number", label: "Número" }, { key: "customer", label: "Cliente" }, { key: "owner", label: "Vendedor" }]}
+        dateFields={[{ key: "createdAt", label: "Fecha de creación" }]}
         title="Cotizaciones" newHref={ctx.can("sales.quotes.write") ? "/sales/quotes/new" : undefined}
         filters={[
           { group: "propias", options: [{ key: "mine", label: "Mis cotizaciones" }, { key: "open", label: "Presupuestos abiertos" }] },

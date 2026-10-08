@@ -378,11 +378,16 @@ model Dashboard {
 model SavedView {
   id             String   @id @default(cuid())
   organizationId String
+  /// null = favorito compartido con toda la organización
+  userId         String?
   entityType     String
   name           String
   columns        String[]
   filters        Json     @default("{}")
   isDefault      Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  @@index([organizationId, entityType])
 }
 
 model DocumentTemplate {
