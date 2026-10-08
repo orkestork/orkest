@@ -83,10 +83,11 @@ export function DataTable({ storageKey, columns, rows, groups, moneyColumns = []
           <button onClick={() => setSelected(new Set())} className="text-xs text-stone-600 hover:underline">Quitar selección</button>
         </div>
       )}
-      <div className="overflow-x-auto">
+      {/* Scroll propio con el alto de la pantalla (como Odoo): la barra horizontal queda siempre visible abajo */}
+      <div className="max-h-[calc(100dvh-10.5rem)] overflow-auto overscroll-contain">
         <table className="w-full table-fixed text-sm" style={{ minWidth: minWidth(cols) }}>
           <colgroup><col className="w-10" />{cols.map((c) => <col key={c.key} style={c.width ? { width: c.width } : undefined} />)}<col className="w-9" /></colgroup>
-          <thead>
+          <thead className="sticky top-0 z-10 bg-white shadow-[0_1px_0_var(--color-stone-200)]">
             <tr className="border-b border-stone-200 text-left text-[13px] font-semibold text-stone-800">
               <th className="px-3 py-2.5"><input type="checkbox" checked={allSelected} onChange={() => setSelected(allSelected ? new Set() : new Set(all.map((r) => r.id)))} aria-label="Seleccionar todo" className="h-4 w-4 accent-[var(--ork-violet)]" /></th>
               {cols.map((c) => (
@@ -98,10 +99,10 @@ export function DataTable({ storageKey, columns, rows, groups, moneyColumns = []
                   ) : c.label}
                 </th>
               ))}
-              <th className="relative px-1">
+              <th className="sticky right-0 z-10 bg-white px-1 shadow-[-1px_0_0_var(--color-stone-200)]">
                 <button onClick={() => setChooser(!chooser)} aria-label="Elegir columnas" className="grid h-7 w-7 place-items-center rounded hover:bg-stone-100">⚙</button>
                 {chooser && (
-                  <div className="absolute right-0 z-20 mt-1 w-56 rounded-xl border border-stone-200 bg-white p-2 text-sm font-normal shadow-xl">
+                  <div className="absolute right-1 z-20 mt-1 max-h-80 w-56 overflow-y-auto rounded-xl border border-stone-200 bg-white p-2 text-sm font-normal shadow-xl">
                     {columns.filter((c) => c.optional).map((c) => (
                       <label key={c.key} className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-stone-50">
                         <input type="checkbox" checked={visible.has(c.key)} onChange={() => toggleCol(c.key)} className="accent-[var(--ork-violet)]" />{c.label}
@@ -137,7 +138,7 @@ export function DataTable({ storageKey, columns, rows, groups, moneyColumns = []
             {all.length === 0 && <tr><td colSpan={cols.length + 2} className="py-12 text-center text-stone-500">No hay registros con estos filtros.</td></tr>}
           </tbody>
           {all.length > 0 && cols.some((c) => c.sum) && (
-            <tfoot>
+            <tfoot className="sticky bottom-0 z-10 bg-white shadow-[0_-1px_0_var(--color-stone-200)]">
               <tr className="border-t-2 border-stone-200 font-semibold">
                 <td />
                 {cols.map((c) => <td key={c.key} className={`px-3 py-2.5 ${c.align === "right" ? "text-right tabular-nums" : ""}`}>{c.sum ? fmtSum(sums(all)[c.key], moneyColumns.includes(c.key)) : ""}</td>)}
