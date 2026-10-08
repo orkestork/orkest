@@ -6,6 +6,9 @@ import { actionContext } from "@/lib/core/context";
 import { createDelivery, createSalesOrder, priceFor } from "@/lib/apps/sales-orders";
 import { invoiceFromSalesOrder } from "@/lib/apps/invoicing";
 import { safeAction } from "@/lib/ui/action";
+import { customFieldsFromForm, getFieldDefs } from "@/lib/core/custom-fields";
+import { ValidationError } from "@/lib/apps/crm";
+import { json } from "@/lib/core/db";
 import type { ActionResult } from "@/components/action-form";
 
 const s = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
@@ -13,6 +16,8 @@ const s = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
 export async function saveSalesOrder(_: ActionResult, form: FormData): Promise<ActionResult> {
   return safeAction(async () => {
     const ctx = await actionContext("sales.quotes.write", "sales");
+    const cf = customFieldsFromForm(await getFieldDefs(ctx.db, "sales_order"), form);
+    if (!cf.ok) throw new ValidationError(cf.errors);
     const customer = await ctx.db.customer.findUnique({ where: { id: s(form, "customerId") } });
     const pricelistId = s(form, "pricelistId") || customer?.pricelistId || null;
     const raw = JSON.parse(s(form, "lines") || "[]") as { productId: string; description: string; quantity: number; unitPrice: number; taxRate: number }[];
@@ -26,6 +31,7 @@ export async function saveSalesOrder(_: ActionResult, form: FormData): Promise<A
     const so = await createSalesOrder(ctx, {
       customerId: s(form, "customerId"), lines, warehouseId: s(form, "warehouseId") || undefined, pricelistId,
       paymentTermId: s(form, "paymentTermId") || null, commitmentAt: s(form, "commitmentAt") || null,
+      taxExempt: s(form, "taxMode") === "exempt", customFields: cf.values,
     });
     redirect(`/sales/orders/${so.id}`);
   });
@@ -64,5 +70,20 @@ export async function savePricelist(_: ActionResult, form: FormData): Promise<Ac
     }
     revalidatePath("/sales/pricelists");
     return { ok: "Guardado" };
+  });
+}
+
+/** Edita los campos personalizados (Studio) de un pedido ya creado. */
+export async function saveSalesOrderFields(_: ActionResult, form: FormData): Promise<ActionResult> {
+  return safeAction(async () => {
+    const ctx = await actionContext("sales.quotes.write", "sales");
+    const id = s(form, "id");
+    const so = await ctx.db.salesOrder.findUnique({ where: { id } });
+    if (!so) throw new ValidationError({ id: "Pedido no encontrado" });
+    const cf = customFieldsFromForm(await getFieldDefs(ctx.db, "sales_order"), form);
+    if (!cf.ok) throw new ValidationError(cf.errors);
+    await ctx.db.salesOrder.update({ where: { id }, data: { customFields: json({ ...(so.customFields as object), ...cf.values }) } });
+    revalidatePath(`/sales/orders/${id}`);
+    return { ok: "Datos de despacho guardados" };
   });
 }

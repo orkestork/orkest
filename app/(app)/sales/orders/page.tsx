@@ -8,6 +8,7 @@ import { BarChart } from "@/components/charts";
 import { money } from "@/lib/ui/format";
 import { DELIVERY_STATUS, INVOICE_STATUS } from "@/lib/ui/sales-labels";
 import type { Prisma } from "@/lib/generated/prisma/client";
+import { fieldOptions, formatFieldValue, getFieldDefs } from "@/lib/core/custom-fields";
 
 export const metadata = { title: "Pedidos de venta" };
 const PAGE = 80;
@@ -27,7 +28,10 @@ export default async function SalesOrders({ searchParams }: PageProps<"/sales/or
   const active = [...str("f").split(","), legacy].filter(Boolean);
   const view = str("view") || "list";
 
-  const [wf, users] = await Promise.all([getWorkflow(ctx.db, "sales_order"), orgUsers(ctx)]);
+  const [wf, users, defs] = await Promise.all([getWorkflow(ctx.db, "sales_order"), orgUsers(ctx), getFieldDefs(ctx.db, "sales_order")]);
+  // Campos de Studio que se pueden filtrar (listas y sí/no) y mostrar como columnas
+  const listDefs = defs.filter((d) => ["select", "boolean", "text", "user"].includes(d.type));
+  const filterDefs = defs.filter((d) => d.type === "select" || d.type === "boolean");
   const states = wf?.states ?? [];
   const stateOf = new Map(states.map((s) => [s.key, s]));
   const um = new Map(users.map((u) => [u.id, u.name]));
@@ -40,6 +44,19 @@ export default async function SalesOrders({ searchParams }: PageProps<"/sales/or
   if (active.includes("deliver")) { where.status = { in: statusKeys.length ? statusKeys : ["confirmed"] }; where.deliveryStatus = { not: "full" }; }
   if (active.includes("invoice")) where.invoiceStatus = "to_invoice";
   if (active.includes("month")) { const d = new Date(); d.setDate(1); d.setHours(0, 0, 0, 0); where.createdAt = { gte: d }; }
+  if (active.includes("taxed")) where.taxExempt = false;
+  if (active.includes("exempt")) where.taxExempt = true;
+  // Filtros por campos de Studio: cf:<campo>=<valor> (mismo campo → O, distintos campos → Y)
+  const cfFilters = new Map<string, string[]>();
+  for (const k of active.filter((x) => x.startsWith("cf:"))) { const [key, value] = k.slice(3).split("="); cfFilters.set(key, [...(cfFilters.get(key) ?? []), value]); }
+  const cfAnd: Prisma.SalesOrderWhereInput[] = [];
+  for (const [key, values] of cfFilters) {
+    const def = filterDefs.find((d) => d.key === key);
+    if (!def) continue;
+    const parsed = values.map((v) => (def.type === "boolean" ? v === "true" : v));
+    cfAnd.push({ OR: parsed.map((v) => ({ customFields: { path: [key], equals: v } })) });
+  }
+  if (cfAnd.length) where.AND = cfAnd;
   if (active.includes("30d")) { const d = new Date(); d.setDate(d.getDate() - 30); where.createdAt = { gte: d }; }
   const q = str("q");
   if (q) where.OR = [{ number: { contains: q, mode: "insensitive" } }, { customer: { name: { contains: q, mode: "insensitive" } } }];
@@ -70,15 +87,18 @@ export default async function SalesOrders({ searchParams }: PageProps<"/sales/or
     return { o, margin, marginPct: n(o.subtotal) ? (margin / n(o.subtotal)) * 100 : 0, owner: um.get(o.ownerId ?? "") ?? "" };
   });
 
+  const cfOf = (d: (typeof data)[number]) => (d.o.customFields ?? {}) as Record<string, unknown>;
   const toRow = (d: (typeof data)[number]): Row => {
     const st = stateOf.get(d.o.status);
     const t = taskCount.get(d.o.id) ?? 0;
     const del = DELIVERY_STATUS[d.o.deliveryStatus] ?? DELIVERY_STATUS.none, inv = INVOICE_STATUS[d.o.invoiceStatus] ?? INVOICE_STATUS.none;
     return {
       id: d.o.id, href: `/sales/orders/${d.o.id}`,
-      raw: { number: d.o.number, createdAt: d.o.createdAt.toISOString(), customer: d.o.customer.name, owner: d.owner, activities: t, subtotal: n(d.o.subtotal), total: n(d.o.total),
+      raw: { ...Object.fromEntries(listDefs.map((f) => [`cf_${f.key}`, String(formatFieldValue(f, cfOf(d)[f.key], um) ?? "")])), tax: d.o.taxExempt ? "Sin IVA" : "Con IVA", number: d.o.number, createdAt: d.o.createdAt.toISOString(), customer: d.o.customer.name, owner: d.owner, activities: t, subtotal: n(d.o.subtotal), total: n(d.o.total),
         deliveryStatus: del.label, invoiceStatus: inv.label, commitmentAt: d.o.commitmentAt?.toISOString() ?? "", status: st?.label ?? d.o.status, margin: Math.round(d.margin), marginPct: Math.round(d.marginPct * 10) / 10 },
       cells: {
+        ...Object.fromEntries(listDefs.map((f) => [`cf_${f.key}`, cfOf(d)[f.key] === undefined || cfOf(d)[f.key] === null || cfOf(d)[f.key] === "" ? <span className="text-stone-400">—</span> : formatFieldValue(f, cfOf(d)[f.key], um)])),
+        tax: d.o.taxExempt ? <StatusPill label="Sin IVA" tone="amber" /> : <span className="text-stone-600">Con IVA</span>,
         number: <span className="font-semibold">{d.o.number}</span>,
         createdAt: when(d.o.createdAt),
         customer: d.o.customer.name,
@@ -108,6 +128,8 @@ export default async function SalesOrders({ searchParams }: PageProps<"/sales/or
     { key: "invoiceStatus", label: "Facturación", sortable: true, optional: true, width: "150px" },
     { key: "commitmentAt", label: "Compromiso", sortable: true, optional: true, hidden: true, width: "120px" },
     { key: "status", label: "Estado", sortable: true, width: "130px" },
+    { key: "tax", label: "IVA", optional: true, width: "100px" },
+    ...listDefs.map((f): Column => ({ key: `cf_${f.key}`, label: f.label, optional: true, width: "150px" })),
     { key: "margin", label: "Margen", align: "right", optional: true, hidden: true, sum: true, width: "130px" },
     { key: "marginPct", label: "Margen (%)", align: "right", optional: true, hidden: true, width: "104px" },
   ];
@@ -145,6 +167,13 @@ export default async function SalesOrders({ searchParams }: PageProps<"/sales/or
           { group: "propias", options: [{ key: "mine", label: "Mis pedidos" }, { key: "deliver", label: "Por entregar" }, { key: "invoice", label: "Por facturar" }] },
           { group: "estado", options: states.map((s) => ({ key: `status:${s.key}`, label: s.label })) },
           { group: "fecha", options: [{ key: "month", label: "Este mes" }, { key: "30d", label: "Últimos 30 días" }] },
+          { group: "iva", options: [{ key: "taxed", label: "Con IVA" }, { key: "exempt", label: "Sin IVA" }] },
+          ...filterDefs.map((f) => ({
+            group: f.label,
+            options: f.type === "boolean"
+              ? [{ key: `cf:${f.key}=true`, label: `${f.label}: sí` }, { key: `cf:${f.key}=false`, label: `${f.label}: no` }]
+              : fieldOptions(f).map((o) => ({ key: `cf:${f.key}=${o.value}`, label: o.label })),
+          })),
         ]}
         groupBys={[{ key: "customer", label: "Cliente" }, { key: "owner", label: "Vendedor" }, { key: "status", label: "Estado" }, { key: "delivery", label: "Entrega" }, { key: "invoice", label: "Facturación" }, { key: "month", label: "Mes" }]}
         views={[{ key: "list", label: "Lista", icon: "list" }, { key: "graph", label: "Gráfico", icon: "graph" }]}

@@ -34,7 +34,7 @@ type LineIn = { productId?: string | null; description: string; quantity: number
 
 export async function createSalesOrder(ctx: ExecContext, d: {
   customerId: string; lines: LineIn[]; warehouseId?: string; pricelistId?: string | null; paymentTermId?: string | null;
-  quoteId?: string | null; commitmentAt?: string | Date | null;
+  quoteId?: string | null; commitmentAt?: string | Date | null; taxExempt?: boolean; customFields?: Record<string, unknown>;
 }) {
   const customer = await ctx.db.customer.findUnique({ where: { id: d.customerId } });
   if (!customer) throw new ValidationError({ customerId: "Cliente no encontrado" });
@@ -43,7 +43,7 @@ export async function createSalesOrder(ctx: ExecContext, d: {
   const rows = lines.map((l) => {
     const disc = num(l.discountPct);
     const total = Math.round(l.quantity * l.unitPrice * (1 - disc / 100) * 100) / 100;
-    return { ...l, discountPct: disc, taxRate: num(l.taxRate ?? 19), total };
+    return { ...l, discountPct: disc, taxRate: d.taxExempt ? 0 : num(l.taxRate ?? 19), total };
   });
   const subtotal = rows.reduce((s, l) => s + l.total, 0);
   const tax = Math.round(rows.reduce((s, l) => s + (l.total * l.taxRate) / 100, 0) * 100) / 100;
@@ -56,7 +56,7 @@ export async function createSalesOrder(ctx: ExecContext, d: {
       organizationId: ctx.orgId, number: await nextNumber(ctx.db, ctx.orgId, "PV"), customerId: d.customerId, quoteId: d.quoteId ?? null,
       warehouseId: wh.id, pricelistId: d.pricelistId ?? customer.pricelistId, paymentTermId: d.paymentTermId ?? customer.paymentTermId,
       status: initialState(wf, "confirmed"), subtotal, tax, total: subtotal + tax, ownerId: ctx.actorId,
-      commitmentAt: d.commitmentAt ? new Date(d.commitmentAt) : null,
+      commitmentAt: d.commitmentAt ? new Date(d.commitmentAt) : null, taxExempt: !!d.taxExempt, customFields: (d.customFields ?? {}) as object,
       lines: { create: rows.map((l) => ({ productId: l.productId || null, description: l.description, quantity: l.quantity, unitPrice: l.unitPrice, discountPct: l.discountPct, taxRate: l.taxRate, total: l.total })) },
     },
   });

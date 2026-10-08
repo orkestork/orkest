@@ -9,20 +9,24 @@ import { Badge, btn, Card, PageHeader, Table, td } from "@/components/ui";
 import { date, money, num } from "@/lib/ui/format";
 import { TRANSFER_STATUS } from "@/lib/ui/stock-labels";
 import { DELIVERY_STATUS, INVOICE_STATUS } from "@/lib/ui/sales-labels";
-import { soAction } from "../../order-actions";
+import { saveSalesOrderFields, soAction } from "../../order-actions";
+import { CustomFieldInputs, CustomFieldValues } from "@/components/custom-fields";
+import { getFieldDefs } from "@/lib/core/custom-fields";
 
 export default async function SalesOrderDetail({ params }: PageProps<"/sales/orders/[id]">) {
   const ctx = await requireModule("sales", "sales.quotes.read");
   const { id } = await params;
   const so = await ctx.db.salesOrder.findUnique({ where: { id }, include: { customer: true, lines: true } });
   if (!so) notFound();
-  const [deliveries, invoices, term, pricelist, quote] = await Promise.all([
+  const [deliveries, invoices, term, pricelist, quote, defs] = await Promise.all([
     ctx.db.transfer.findMany({ where: { sourceType: "sales_order", sourceId: so.id }, orderBy: { createdAt: "asc" } }),
     ctx.hasModule("invoicing") ? ctx.db.invoice.findMany({ where: { salesOrderId: so.id }, orderBy: { issuedAt: "asc" } }) : [],
     so.paymentTermId ? ctx.db.paymentTerm.findUnique({ where: { id: so.paymentTermId } }) : null,
     so.pricelistId ? ctx.db.pricelist.findUnique({ where: { id: so.pricelistId } }) : null,
     so.quoteId ? ctx.db.quote.findUnique({ where: { id: so.quoteId } }) : null,
+    getFieldDefs(ctx.db, "sales_order"),
   ]);
+  const cfValues = (so.customFields ?? {}) as Record<string, unknown>;
   const products = new Map((await ctx.db.product.findMany({ where: { id: { in: so.lines.map((l) => l.productId ?? "") } } })).map((p) => [p.id, p]));
   const open = so.status === "confirmed";
   return (
@@ -30,7 +34,8 @@ export default async function SalesOrderDetail({ params }: PageProps<"/sales/ord
       <PageHeader title={`Pedido ${so.number}`} crumbs={[{ label: "Pedidos", href: "/sales/orders" }, { label: so.number }]}
         subtitle={<span className="flex flex-wrap items-center gap-2"><Link href={`/crm/customers/${so.customerId}`} className="hover:underline">{so.customer.name}</Link> · {term?.name ?? "sin plazo"} · {pricelist?.name ?? "precio base"} · compromiso {date(so.commitmentAt)}
           <Badge tone={DELIVERY_STATUS[so.deliveryStatus].tone}>{DELIVERY_STATUS[so.deliveryStatus].label}</Badge>
-          <Badge tone={INVOICE_STATUS[so.invoiceStatus].tone}>{INVOICE_STATUS[so.invoiceStatus].label}</Badge></span>} />
+          <Badge tone={INVOICE_STATUS[so.invoiceStatus].tone}>{INVOICE_STATUS[so.invoiceStatus].label}</Badge>
+          {so.taxExempt && <Badge tone="amber">Sin IVA (exento)</Badge>}</span>} />
       <div className="mb-6"><WorkflowBar ctx={ctx} entityType="sales_order" entity={plain(so)} /></div>
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
@@ -51,10 +56,21 @@ export default async function SalesOrderDetail({ params }: PageProps<"/sales/ord
             </Table>
             <div className="ml-auto max-w-xs space-y-1 p-5 text-sm">
               <div className="flex justify-between"><span className="text-slate-500">Subtotal</span>{money(so.subtotal, so.currency)}</div>
-              <div className="flex justify-between"><span className="text-slate-500">Impuestos</span>{money(so.tax, so.currency)}</div>
+              <div className="flex justify-between"><span className="text-slate-500">Impuestos{so.taxExempt && " (exento)"}</span>{money(so.tax, so.currency)}</div>
               <div className="flex justify-between border-t pt-1 text-base font-semibold"><span>Total</span>{money(so.total, so.currency)}</div>
             </div>
           </Card>
+          {defs.length > 0 && (
+            <Card title="Despacho y facturación">
+              {ctx.can("sales.quotes.write") && so.status !== "canceled" ? (
+                <ActionForm action={saveSalesOrderFields} className="space-y-4">
+                  <input type="hidden" name="id" value={so.id} />
+                  <CustomFieldInputs defs={defs} values={cfValues} legend={null} wide />
+                  <SubmitButton className={btn.secondary}>Guardar</SubmitButton>
+                </ActionForm>
+              ) : <CustomFieldValues defs={defs} values={cfValues} />}
+            </Card>
+          )}
           <Card title="Entregas y facturas">
             <div className="space-y-2 text-sm">
               {deliveries.map((t) => <p key={t.id}><Link href={`/inventory/transfers/${t.id}`} className="font-mono text-xs font-semibold text-[var(--ork-violet)] underline">{t.number}</Link> <Badge tone={TRANSFER_STATUS[t.status].tone}>{TRANSFER_STATUS[t.status].label}</Badge></p>)}

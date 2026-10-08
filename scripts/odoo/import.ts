@@ -374,6 +374,9 @@ async function main() {
 
   // ───────── 10. Plantilla (apps, roles, flujos) y acceso ─────────
   await applyTemplate(ctx, "manufacturing");
+  // Configuración propia de la organización (campos de Studio, etc.), si existe
+  const { existsSync } = await import("node:fs");
+  if (existsSync(`config/orgs/${ORG_SLUG}.json`)) await (await import("../org-config")).applyOrgConfig(`config/orgs/${ORG_SLUG}.json`);
   const owner = await prisma.role.findFirstOrThrow({ where: { organizationId: orgId, key: "OWNER" } });
   const user = (await prisma.user.findUnique({ where: { email: ADMIN_EMAIL } }))
     ?? (await prisma.user.create({ data: { email: ADMIN_EMAIL, name: "Administrador Kliniu", passwordHash: await hashPassword("orkest123") } }));

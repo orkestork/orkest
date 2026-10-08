@@ -1164,6 +1164,8 @@ model SalesOrder {
   tax            Decimal   @default(0) @db.Decimal(18, 2)
   total          Decimal   @default(0) @db.Decimal(18, 2)
   commitmentAt   DateTime?
+  /// Pedido exento: todas las líneas sin IVA (0 %)
+  taxExempt      Boolean   @default(false)
   ownerId        String?
   customFields   Json      @default("{}")
   createdAt      DateTime  @default(now())

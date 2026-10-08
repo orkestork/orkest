@@ -4,12 +4,14 @@ import { fieldOptions, formatFieldValue, relationTarget, type FieldDef } from "@
 type Relations = Record<string, { id: string; name: string }[]>;
 
 /** Renderiza inputs para los campos personalizados configurados en Studio. */
-export function CustomFieldInputs({ defs, values = {}, users = [], relations = {}, legend = "Campos personalizados" }: {
+export function CustomFieldInputs({ defs, values = {}, users = [], relations = {}, legend = "Campos personalizados", wide = false }: {
   defs: (FieldDef & { id: string })[]; values?: Record<string, unknown>; users?: { id: string; name: string }[]; relations?: Relations; legend?: string | null;
+  /** Tres columnas en pantallas grandes (formularios a todo el ancho) */
+  wide?: boolean;
 }) {
   if (defs.length === 0) return null;
   return (
-    <fieldset className="grid gap-4 sm:grid-cols-2">
+    <fieldset className={`grid gap-4 sm:grid-cols-2 ${wide ? "lg:grid-cols-3" : ""}`}>
       {legend && <legend className="col-span-full mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">{legend}</legend>}
       {defs.map((d) => {
         const name = `cf_${d.key}`;
