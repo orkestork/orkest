@@ -25,7 +25,9 @@
     "org:config": "tsx --env-file=.env scripts/org-config.ts",
     "org:config:supabase": "tsx --env-file=.env.supabase scripts/org-config.ts",
     "import:odoo:salespeople": "tsx --env-file=.env --env-file=.env.odoo scripts/odoo/salespeople.ts",
-    "import:odoo:salespeople:supabase": "tsx --env-file=.env.supabase --env-file=.env.odoo scripts/odoo/salespeople.ts"
+    "import:odoo:salespeople:supabase": "tsx --env-file=.env.supabase --env-file=.env.odoo scripts/odoo/salespeople.ts",
+    "demo:org": "tsx --env-file=.env scripts/demo-org.ts",
+    "demo:org:supabase": "tsx --env-file=.env.supabase scripts/demo-org.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.132.1",

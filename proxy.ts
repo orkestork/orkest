@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { jwtVerify } from "jose";
 
-const PUBLIC = ["/login", "/api/v1", "/api/cron", "/api/dev", "/_next", "/favicon"];
+const PUBLIC = ["/login", "/demo", "/api/v1", "/api/cron", "/api/dev", "/_next", "/favicon"];
 
 /** Exige sesión válida para toda la app. La autorización fina se hace en el servidor (context.ts). */
 export async function proxy(req: NextRequest) {
