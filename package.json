@@ -16,6 +16,7 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:reset": "prisma db push && tsx prisma/seed.ts",
     "db:push:supabase": "node --env-file=.env.supabase node_modules/prisma/build/index.js db push",
+    "db:rls:supabase": "tsx --env-file=.env.supabase scripts/supabase-rls.ts",
     "postinstall": "prisma generate",
     "test:flows": "tsx scripts/test-phase1.ts && tsx scripts/test-phase2.ts && tsx scripts/test-phase3.ts && tsx scripts/test-warehouses.ts && tsx scripts/test-inventory-audit.ts && tsx scripts/test-campaigns.ts",
     "check:seed": "tsx scripts/check-seed.ts",
