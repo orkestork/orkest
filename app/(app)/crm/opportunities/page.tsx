@@ -16,7 +16,7 @@ export const metadata = { title: "Oportunidades" };
 export default async function Opportunities() {
   const ctx = await requireModule("crm", "crm.opportunities.read");
   const wf = await getWorkflow(ctx.db, "opportunity");
-  if (!wf) return <Empty title="No hay pipeline configurado">Configúralo en Studio → Workflows.</Empty>;
+  if (!wf) return <Empty title="No hay pipeline configurado">Configúralo en Builder → Workflows.</Empty>;
   const [opps, users] = await Promise.all([
     ctx.db.opportunity.findMany({ include: { customer: true }, orderBy: { amount: "desc" } }),
     orgUsers(ctx),

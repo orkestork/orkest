@@ -1,5 +1,5 @@
 /**
- * Búsqueda de listas estilo Odoo, del lado del servidor. Todo vive en la URL:
+ * Búsqueda de listas del lado del servidor. Todo vive en la URL:
  *   f=k1,k2           filtros predefinidos (los del mismo grupo se combinan con O)
  *   s=campo:valor     búsqueda por campo (repetible; mismo campo → O, campos distintos → Y)
  *   d=campo:periodo   filtro de fecha: 2026-10 (mes) · 2026-Q4 (trimestre) · 2026 (año)

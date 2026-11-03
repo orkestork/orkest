@@ -52,7 +52,7 @@ export default async function QuotePrint({ params }: PageProps<"/sales/quotes/[i
           {q.terms && <p className="mt-2 whitespace-pre-wrap">{q.terms}</p>}
         </div>
       )}
-      <p className="mt-10 text-center text-[11px] text-stone-400 print:fixed print:bottom-4 print:left-0 print:right-0">Documento generado con ORKEST</p>
+      <p className="mt-10 text-center text-[11px] text-stone-400 print:fixed print:bottom-4 print:left-0 print:right-0">Documento generado con Workezt</p>
     </div>
   );
 }

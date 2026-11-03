@@ -33,7 +33,7 @@ export default async function AutomationEditor({ params }: PageProps<"/studio/au
 
   return (
     <>
-      <PageHeader title={existing ? existing.name : "Nueva regla / automatización"} crumbs={[{ label: "Studio", href: "/studio" }, { label: "Automatizaciones", href: "/studio/automations" }, { label: existing ? "Editar" : "Nueva" }]} />
+      <PageHeader title={existing ? existing.name : "Nueva regla / automatización"} crumbs={[{ label: "Builder", href: "/studio" }, { label: "Automatizaciones", href: "/studio/automations" }, { label: existing ? "Editar" : "Nueva" }]} />
       <Card className="max-w-3xl">
         <ActionForm action={saveAutomation} className="space-y-6">
           {existing && <input type="hidden" name="id" value={existing.id} />}

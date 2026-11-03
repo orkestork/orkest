@@ -2,7 +2,7 @@ import Link from "@/components/plink";
 import { requirePermission } from "@/lib/core/context";
 import { PageHeader } from "@/components/ui";
 
-export const metadata = { title: "ORKEST Studio" };
+export const metadata = { title: "Workezt Builder" };
 
 export default async function Studio() {
   const ctx = await requirePermission("studio.manage");
@@ -22,7 +22,7 @@ export default async function Studio() {
   ];
   return (
     <>
-      <PageHeader title="ORKEST Studio" subtitle={`Configura ORKEST para ${ctx.org.name} sin modificar código. Nada de lo que cambies aquí afecta a otras organizaciones.`} />
+      <PageHeader title="Workezt Builder" subtitle={`Configura Workezt para ${ctx.org.name} sin modificar código. Nada de lo que cambies aquí afecta a otras organizaciones.`} />
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {tiles.map((t) => (
           <Link key={t.href} href={t.href} className="group rounded-2xl border border-[var(--ork-rule)] bg-white/90 p-5 shadow-sm transition hover:border-[var(--brand)]">
@@ -31,7 +31,7 @@ export default async function Studio() {
           </Link>
         ))}
       </div>
-      <p className="mt-8 text-xs text-slate-400">Vistas personalizadas, formularios por rol y reportes ad-hoc están previstos en el modelo (SavedView) para próximas iteraciones de Studio.</p>
+      <p className="mt-8 text-xs text-slate-400">Vistas personalizadas, formularios por rol y reportes ad-hoc están previstos en el modelo (SavedView) para próximas iteraciones de Builder.</p>
     </>
   );
 }

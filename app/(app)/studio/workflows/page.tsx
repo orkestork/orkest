@@ -12,7 +12,7 @@ export default async function Workflows() {
   const label = (t: string) => customs.get(t) ?? getEntityOrNull(t)?.labelPlural ?? t;
   return (
     <>
-      <PageHeader title="Workflows" crumbs={[{ label: "Studio", href: "/studio" }, { label: "Workflows" }]} subtitle="Cada entidad con ciclo de vida usa el workflow por defecto de la organización. Pipelines y estados personalizados se definen aquí." />
+      <PageHeader title="Workflows" crumbs={[{ label: "Builder", href: "/studio" }, { label: "Workflows" }]} subtitle="Cada entidad con ciclo de vida usa el workflow por defecto de la organización. Pipelines y estados personalizados se definen aquí." />
       <div className="grid gap-4 sm:grid-cols-2">
         {wfs.filter((w) => ctx.hasModule(getEntityOrNull(w.entityType)?.module ?? "")).map((w) => (
           <Link key={w.id} href={`/studio/workflows/${w.id}`}>

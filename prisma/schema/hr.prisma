@@ -1,0 +1,356 @@
+// ───────────────────────────── APP: Talento humano (hr) ─────────────────────────────
+// Extiende Employee y OrgUnit (schema.prisma). Estados y tipos como texto, igual que el resto de ORKEST.
+// Estados de solicitudes: PENDING | APPROVED | REJECTED | CANCELLED
+
+/// Vacaciones, permisos, licencias, incapacidades y ausencias no remuneradas.
+model TimeOffRequest {
+  id               String    @id @default(cuid())
+  organizationId   String
+  employeeId       String
+  /// VACATION | PERMIT | LEAVE | INCAPACITY | UNPAID
+  type             String
+  /// Subtipo de permiso: CITA_MEDICA | CALAMIDAD_DOMESTICA | LUTO | ... | HORAS | OTRO
+  subType          String?
+  startDate        DateTime
+  endDate          DateTime
+  durationDays     Int
+  hours            Float?
+  startTime        String?
+  endTime          String?
+  reason           String?
+  /// Soporte (FileObject)
+  fileId           String?
+  status           String    @default("PENDING")
+  reviewNote       String?
+  reviewedById     String?
+  isPaid           Boolean?
+  incapacityNumber String?
+  /// ENFERMEDAD_GENERAL | ACCIDENTE_LABORAL | ENFERMEDAD_LABORAL | MATERNIDAD | PATERNIDAD
+  incapacityType   String?
+  epsName          String?
+  treatingDoctor   String?
+  diagnosis        String?
+  diagnosisCode    String?
+  issueDate        DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, status])
+  @@index([employeeId])
+}
+
+model AttendanceRecord {
+  id             String   @id @default(cuid())
+  organizationId String
+  employeeId     String
+  date           DateTime
+  /// PRESENT | ABSENT | LATE
+  status         String   @default("PRESENT")
+  checkIn        String?
+  checkOut       String?
+  note           String?
+  createdAt      DateTime @default(now())
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, date])
+  @@index([organizationId, date])
+}
+
+model OvertimeRequest {
+  id             String   @id @default(cuid())
+  organizationId String
+  employeeId     String
+  date           DateTime
+  startTime      String
+  endTime        String
+  hours          Float
+  /// DIURNA | NOCTURNA | DOMINICAL_FESTIVA_DIURNA | DOMINICAL_FESTIVA_NOCTURNA
+  overtimeType   String
+  reason         String?
+  status         String   @default("PENDING")
+  reviewNote     String?
+  reviewedById   String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, status])
+  @@index([employeeId])
+}
+
+/// Desprendible de nómina publicado (con datos de pago y aportes).
+model Payslip {
+  id             String    @id @default(cuid())
+  organizationId String
+  employeeId     String
+  /// "2026-10" o "2026-10 Q1"
+  period         String
+  grossAmount    Decimal   @db.Decimal(14, 2)
+  deductions     Decimal   @db.Decimal(14, 2)
+  netAmount      Decimal   @db.Decimal(14, 2)
+  fileId         String?
+  paymentDueDate DateTime?
+  isPaid         Boolean   @default(false)
+  paidAt         DateTime?
+  /// Aportes legales; null = sin desglose cargado
+  epsAmount      Decimal?  @db.Decimal(14, 2)
+  arlAmount      Decimal?  @db.Decimal(14, 2)
+  pensionAmount  Decimal?  @db.Decimal(14, 2)
+  createdAt      DateTime  @default(now())
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, period])
+  @@index([employeeId])
+}
+
+model CertificateRequest {
+  id             String   @id @default(cuid())
+  organizationId String
+  employeeId     String
+  includeSalary  Boolean  @default(false)
+  /// Destinatario ("A quien interese" por defecto)
+  addressee      String?
+  status         String   @default("PENDING")
+  reviewNote     String?
+  reviewedById   String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, status])
+}
+
+model Benefit {
+  id             String    @id @default(cuid())
+  organizationId String
+  title          String
+  description    String
+  detail         String?
+  /// SALUD | EDUCACION | BIENESTAR | CONVENIOS | BONIFICACIONES | RECONOCIMIENTOS | OTRO
+  category       String    @default("OTRO")
+  frequency      String?
+  isFeatured     Boolean   @default(false)
+  isActive       Boolean   @default(true)
+  expiresAt      DateTime?
+  order          Int       @default(0)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  requests BenefitRequest[]
+
+  @@index([organizationId, isActive])
+}
+
+model BenefitRequest {
+  id             String   @id @default(cuid())
+  organizationId String
+  benefitId      String
+  employeeId     String
+  status         String   @default("PENDING")
+  note           String?
+  reviewNote     String?
+  reviewedById   String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  benefit  Benefit  @relation(fields: [benefitId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, status])
+}
+
+/// Noticias / comunicados internos.
+model HrAnnouncement {
+  id             String    @id @default(cuid())
+  organizationId String
+  title          String
+  body           String
+  authorName     String?
+  /// GENERAL | RRHH | EVENTOS | BIENESTAR | TECNOLOGIA | SST | COMERCIAL | PRODUCCION
+  category       String    @default("GENERAL")
+  isImportant    Boolean   @default(false)
+  isActive       Boolean   @default(true)
+  scheduledAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  reads HrAnnouncementRead[]
+
+  @@index([organizationId, isActive])
+}
+
+model HrAnnouncementRead {
+  id             String   @id @default(cuid())
+  organizationId String
+  announcementId String
+  userId         String
+  readAt         DateTime @default(now())
+
+  announcement HrAnnouncement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+
+  @@unique([announcementId, userId])
+}
+
+/// Selección: candidatos por etapa.
+model Candidate {
+  id             String   @id @default(cuid())
+  organizationId String
+  fullName       String
+  email          String?
+  phone          String?
+  position       String
+  /// POSTULADO | ENTREVISTA | PRUEBA | OFERTA | CONTRATADO | DESCARTADO
+  stage          String   @default("POSTULADO")
+  source         String?
+  notes          String?
+  fileId         String?
+  createdById    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([organizationId, stage])
+}
+
+/// Bitácora del colaborador: seguimientos, llamados de atención, reconocimientos.
+model EmployeeNote {
+  id             String   @id @default(cuid())
+  organizationId String
+  employeeId     String
+  authorId       String
+  /// SEGUIMIENTO | LLAMADO_ATENCION | RECONOCIMIENTO | OTRO
+  type           String   @default("SEGUIMIENTO")
+  note           String
+  createdAt      DateTime @default(now())
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId])
+}
+
+/// Dotación entregada al colaborador (equipos, uniformes, EPP…).
+model EmployeeAsset {
+  id             String    @id @default(cuid())
+  organizationId String
+  employeeId     String
+  /// COMPUTO | MOVIL | UNIFORME | EPP | HERRAMIENTA | MOBILIARIO | VEHICULO | OTRO
+  type           String    @default("OTRO")
+  name           String
+  serial         String?
+  /// ENTREGADO | DEVUELTO | DANADO | PERDIDO
+  status         String    @default("ENTREGADO")
+  deliveredAt    DateTime
+  returnedAt     DateTime?
+  notes          String?
+  createdById    String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, status])
+  @@index([employeeId])
+}
+
+model EmployeeDocument {
+  id             String    @id @default(cuid())
+  organizationId String
+  employeeId     String
+  /// CONTRATO | CERTIFICADO | COMPROBANTE_PAGO | OTRO
+  category       String
+  name           String
+  fileId         String
+  expiresAt      DateTime?
+  uploadedBySelf Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, expiresAt])
+  @@index([employeeId])
+}
+
+/// Categorías del centro de solicitudes (tickets internos) con campos dinámicos.
+model HrRequestCategory {
+  id                   String   @id @default(cuid())
+  organizationId       String
+  name                 String
+  icon                 String?
+  /// [{ key, label, type: text|select|boolean, options?, required? }]
+  fieldsSchema         Json     @default("[]")
+  defaultResponsibleId String?
+  /// Departamentos (OrgUnit) que pueden usar la categoría; vacío = todos
+  allowedDepartmentIds String[] @default([])
+  active               Boolean  @default(true)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  tickets HrTicket[]
+
+  @@unique([organizationId, name])
+}
+
+model HrTicket {
+  id             String    @id @default(cuid())
+  organizationId String
+  code           String
+  employeeId     String
+  categoryId     String
+  /// BAJA | MEDIA | ALTA | URGENTE
+  priority       String    @default("MEDIA")
+  subject        String
+  description    String
+  location       String?
+  extraFields    Json      @default("{}")
+  /// PENDIENTE | EN_PROCESO | ESPERANDO_RESPUESTA | FINALIZADO | CANCELADO
+  status         String    @default("PENDIENTE")
+  responsibleId  String?
+  dueDate        DateTime?
+  resolvedAt     DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  employee Employee          @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  category HrRequestCategory @relation(fields: [categoryId], references: [id])
+  comments HrTicketComment[]
+  events   HrTicketEvent[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId, status])
+  @@index([responsibleId])
+}
+
+model HrTicketComment {
+  id             String   @id @default(cuid())
+  organizationId String
+  ticketId       String
+  userId         String
+  message        String
+  createdAt      DateTime @default(now())
+
+  ticket HrTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
+}
+
+/// Historial de cambios del ticket (CREATED | STATUS | PRIORITY | RESPONSIBLE | COMMENT | ATTACHMENT | EDITED).
+model HrTicketEvent {
+  id             String   @id @default(cuid())
+  organizationId String
+  ticketId       String
+  actorId        String?
+  type           String
+  field          String?
+  fromValue      String?
+  toValue        String?
+  createdAt      DateTime @default(now())
+
+  ticket HrTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
+}

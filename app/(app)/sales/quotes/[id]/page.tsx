@@ -8,7 +8,8 @@ import { availableTransitions, getWorkflow } from "@/lib/core/workflow";
 import { orgUsers } from "@/lib/core/members";
 import { ActionForm, SubmitButton } from "@/components/action-form";
 import { CustomFieldInputs, CustomFieldValues } from "@/components/custom-fields";
-import { RecordTopBar, StatusChevrons, type SmartButton } from "@/components/record/top-bar";
+import { RecordTopBar, StatusTrack, type SmartButton } from "@/components/record/top-bar";
+import { AppIcon } from "@/components/app-icons";
 import { Chatter } from "@/components/record/chatter";
 import { Tabs } from "@/components/record/tabs";
 import { StatusPill } from "@/components/list/status-pill";
@@ -79,7 +80,7 @@ export default async function QuoteDetail({ params }: PageProps<"/sales/quotes/[
         </table>
       </div>
       <div className="grid gap-6 md:grid-cols-[1fr_320px]">
-        <p className="whitespace-pre-wrap text-sm text-stone-600">{q.terms || <span className="text-stone-400">Sin términos y condiciones.</span>}</p>
+        <p className="whitespace-pre-wrap text-sm text-stone-600">{q.terms || <span className="text-stone-400">Sin condiciones comerciales.</span>}</p>
         <dl className="space-y-1.5 text-sm">
           <div className="flex justify-between"><dt className="text-stone-600">Subtotal</dt><dd className="tabular-nums">{money(q.subtotal)}</dd></div>
           <div className="flex justify-between"><dt className="text-stone-600">Impuestos</dt><dd className="tabular-nums">{money(q.tax)}</dd></div>
@@ -104,42 +105,46 @@ export default async function QuoteDetail({ params }: PageProps<"/sales/quotes/[
       <RecordTopBar listLabel="Cotizaciones" listHref="/sales/quotes" title={q.number} newHref={ctx.can("sales.quotes.write") ? "/sales/quotes/new" : undefined} smart={smart}
         pager={{ index: idx + 1, total: order.length, prevHref: idx > 0 ? `/sales/quotes/${order[idx - 1].id}` : undefined, nextHref: idx < order.length - 1 ? `/sales/quotes/${order[idx + 1].id}` : undefined }} />
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
-        <div className="min-w-0">
-          {/* Barra de acciones + estado */}
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--ork-rule)] bg-white/80 p-2">
-            <div className="flex flex-wrap gap-1.5">
-              {transitions.map((t, i) => (
-                <ActionForm key={t.id} action={transitionAction}>
-                  <input type="hidden" name="entityType" value="quote" /><input type="hidden" name="entityId" value={q.id} /><input type="hidden" name="transitionId" value={t.id} />
-                  <SubmitButton pendingText="…" className={`rounded-lg px-3 py-1.5 text-sm font-medium ${i === 0 && !["rejected", "lost"].includes(t.toKey) ? "bg-[var(--ork-purple)] text-white hover:bg-[var(--ork-violet)]" : "bg-stone-200/70 text-stone-800 hover:bg-stone-200"}`}>
-                    {t.label}{t.requiresApproval ? " · requiere aprobación" : ""}
-                  </SubmitButton>
-                </ActionForm>
-              ))}
-              <Link href={`/sales/quotes/${q.id}/print`} target="_blank" className="rounded-lg bg-stone-200/70 px-3 py-1.5 text-sm font-medium text-stone-800 hover:bg-stone-200">Vista previa</Link>
+      <div className="mx-auto max-w-[1180px] space-y-6">
+        {/* Encabezado del documento */}
+        <section className="rounded-2xl border border-[var(--ork-rule)] bg-white p-5 sm:p-7">
+          <div className="flex flex-wrap items-start justify-between gap-5">
+            <div className="flex min-w-0 items-start gap-4">
+              <AppIcon name="sales" size={48} />
+              <div className="min-w-0">
+                <p className="text-xs font-medium uppercase tracking-wide text-stone-500">Cotización</p>
+                <h1 className="font-display text-3xl font-bold leading-tight">{q.number}</h1>
+                <p className="mt-1 text-sm"><Link href={`/crm/customers/${q.customerId}`} className="font-medium text-[var(--ork-violet)] hover:underline">{q.customer.name}</Link>
+                  <span className="text-stone-500">{[q.customer.taxId && ` · NIT ${q.customer.taxId}`, q.customer.city && ` · ${q.customer.city}`, q.customer.email && ` · ${q.customer.email}`].filter(Boolean).join("")}</span></p>
+                <p className="mt-1 text-xs text-stone-500">Creada {date(q.createdAt)} por {um.get(q.ownerId ?? "") ?? "—"}{q.validUntil && <> · <span className={q.validUntil < new Date() && editable ? "font-semibold text-rose-700" : ""}>válida hasta {date(q.validUntil)}</span></>}</p>
+              </div>
             </div>
-            {wf && <StatusChevrons states={wf.states} current={q.status} />}
+            <div className="flex flex-col items-end gap-3">
+              <StatusPill label={state?.label ?? q.status} tone={state?.color} />
+              <div className="flex flex-wrap justify-end gap-2">
+                <Link href={`/sales/quotes/${q.id}/print`} target="_blank" className="rounded-full border border-[var(--ork-rule)] px-4 py-1.5 text-sm font-medium text-stone-700 hover:border-[var(--ork-violet)]/50">Ver documento</Link>
+                {[...transitions].reverse().map((t, ri) => {
+                  const primary = ri === transitions.length - 1 && !["rejected", "lost"].includes(t.toKey);
+                  return (
+                    <ActionForm key={t.id} action={transitionAction}>
+                      <input type="hidden" name="entityType" value="quote" /><input type="hidden" name="entityId" value={q.id} /><input type="hidden" name="transitionId" value={t.id} />
+                      <SubmitButton pendingText="…" className={`rounded-full px-4 py-1.5 text-sm font-medium ${primary ? "bg-[var(--ork-purple)] text-white shadow-sm hover:bg-[var(--ork-violet)]" : "border border-[var(--ork-rule)] text-stone-700 hover:border-[var(--ork-violet)]/50"}`}>
+                        {t.label}{t.requiresApproval ? " · requiere aprobación" : ""}
+                      </SubmitButton>
+                    </ActionForm>
+                  );
+                })}
+              </div>
+            </div>
           </div>
+          {wf && <div className="mt-6 border-t border-stone-100 pt-5"><StatusTrack states={wf.states} current={q.status} /></div>}
+        </section>
 
-          {/* Hoja */}
-          <div className="rounded-2xl border border-[var(--ork-rule)] bg-white p-6">
-            <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <h1 className="font-display text-4xl uppercase leading-none tracking-tight">{q.number}</h1>
-                <p className="mt-2 text-sm"><Link href={`/crm/customers/${q.customerId}`} className="font-medium text-[var(--ork-violet)] hover:underline">{q.customer.name}</Link>
-                  <span className="block text-stone-600">{[q.customer.taxId && `NIT ${q.customer.taxId}`, q.customer.city, q.customer.email].filter(Boolean).join(" · ")}</span></p>
-              </div>
-              <div className="text-right text-sm">
-                <StatusPill label={state?.label ?? q.status} tone={state?.color} />
-                <p className="mt-2 text-stone-600">Creada {date(q.createdAt)} · {um.get(q.ownerId ?? "") ?? "—"}</p>
-                {q.validUntil && <p className={q.validUntil < new Date() && editable ? "font-semibold text-rose-700" : "text-stone-600"}>Válida hasta {date(q.validUntil)}</p>}
-              </div>
-            </div>
-
+        {/* Contenido */}
+        <section className="rounded-2xl border border-[var(--ork-rule)] bg-white p-5 sm:p-7">
             <Tabs tabs={[
-              { key: "lines", label: "Líneas de la cotización", content: editable ? editor : readOnlyLines },
-              { key: "other", label: "Otra información", content: (
+              { key: "lines", label: "Detalle", content: editable ? editor : readOnlyLines },
+              { key: "other", label: "Condiciones y datos", content: (
                 <div className="grid gap-6 md:grid-cols-2">
                   <dl className="space-y-2 text-sm">
                     {[["Vendedor", um.get(q.ownerId ?? "") ?? "—"], ["Plazo de pago", terms.find((t) => t.id === q.paymentTermId)?.name ?? "—"], ["Lista de precios", pricelists.find((p) => p.id === q.pricelistId)?.name ?? "Precio base"], ["Moneda", q.currency]].map(([k, v]) => (
@@ -157,12 +162,9 @@ export default async function QuoteDetail({ params }: PageProps<"/sales/quotes/[
                 </div>
               ) },
             ]} />
-          </div>
-        </div>
+        </section>
 
-        <div className="xl:sticky xl:top-20 xl:max-h-[calc(100vh-6rem)] xl:overflow-y-auto xl:pr-1">
-          <Chatter ctx={ctx} entityType="quote" entityId={q.id} canWrite={ctx.can("sales.quotes.write")} />
-        </div>
+        <Chatter ctx={ctx} entityType="quote" entityId={q.id} canWrite={ctx.can("sales.quotes.write")} />
       </div>
     </>
   );

@@ -8,7 +8,7 @@ export function PageHeader({ title, subtitle, actions, crumbs }: {
     <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
       <div className="min-w-0">
         {crumbs && (
-          <nav className="mb-2 flex flex-wrap gap-1 text-[11px] uppercase tracking-[0.14em] text-slate-500">
+          <nav className="mb-1.5 flex flex-wrap gap-1 text-xs text-slate-500">
             {crumbs.map((c, i) => (
               <span key={i} className="flex gap-1">
                 {c.href ? <Link href={c.href} className="hover:text-slate-900">{c.label}</Link> : c.label}
@@ -17,7 +17,7 @@ export function PageHeader({ title, subtitle, actions, crumbs }: {
             ))}
           </nav>
         )}
-        <h1 className="font-display text-3xl uppercase leading-none tracking-tight text-[var(--ork-ink)] sm:text-4xl">{title}</h1>
+        <h1 className="font-display text-3xl font-bold leading-tight text-[var(--ork-ink)]">{title}</h1>
         {subtitle && <p className="mt-2 max-w-3xl text-sm text-slate-500">{subtitle}</p>}
       </div>
       {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
@@ -59,26 +59,8 @@ export function Badge({ children, tone = "slate" }: { children: ReactNode; tone?
 export const SEVERITY_TONE: Record<string, string> = { LOW: "slate", MEDIUM: "amber", HIGH: "rose", CRITICAL: "rose" };
 export const SEVERITY_LABEL: Record<string, string> = { LOW: "Baja", MEDIUM: "Media", HIGH: "Alta", CRITICAL: "Crítica" };
 
-export const btn = {
-  primary: "inline-flex items-center justify-center gap-1.5 rounded-full bg-[var(--brand)] px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-[var(--ork-violet)] disabled:opacity-50",
-  secondary: "inline-flex items-center justify-center gap-1.5 rounded-full border border-[var(--ork-ink)]/25 bg-white px-4 py-2 text-sm font-medium text-[var(--ork-ink)] transition hover:border-[var(--ork-violet)] hover:text-[var(--ork-violet)] disabled:opacity-50",
-  danger: "inline-flex items-center justify-center gap-1.5 rounded-full border border-[var(--ork-pink)]/30 bg-[var(--ork-pink)]/5 px-4 py-2 text-sm font-medium text-[var(--ork-pink)] hover:bg-[var(--ork-pink)]/10",
-  ghost: "inline-flex items-center gap-1 rounded-md px-2 py-1 text-sm text-slate-600 hover:bg-slate-100",
-  small: "inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:border-[var(--ork-violet)] hover:text-[var(--ork-violet)]",
-};
-
-export const input = "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand)]/20";
-
-export function Field({ label, children, hint, error, className = "" }: { label: string; children: ReactNode; hint?: string; error?: string; className?: string }) {
-  return (
-    <label className={`block ${className}`}>
-      <span className="mb-1 block text-xs font-medium text-slate-600">{label}</span>
-      {children}
-      {hint && !error && <span className="mt-1 block text-xs text-slate-400">{hint}</span>}
-      {error && <span className="mt-1 block text-xs text-rose-600">{error}</span>}
-    </label>
-  );
-}
+// Estilos y Field sin dependencias de servidor: también los usan componentes cliente
+export { btn, input, Field } from "./ui-base";
 
 export function Table({ head, children, empty }: { head: ReactNode[]; children: ReactNode; empty?: boolean }) {
   return (

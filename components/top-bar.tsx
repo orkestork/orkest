@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useRef } from "react";
 import { AppIcon } from "./app-icons";
+import { WorkeztLogo, WorkeztMark } from "./workezt-logo";
 import { currentApp, type LauncherApp } from "@/lib/launcher";
 import { switchOrganization } from "@/app/(app)/shell-actions";
 import { logout } from "@/app/login/actions";
@@ -24,7 +25,7 @@ export function TopBar({ apps, org, memberships, user, unread, pendingApprovals 
   const home = path === "/";
 
   return (
-    <header className="sticky top-0 z-20 print:hidden border-b border-[var(--ork-rule)] bg-[var(--ork-paper-light)]/85 backdrop-blur">
+    <header className="sticky top-0 z-20 print:hidden border-b border-[var(--ork-rule)] bg-white/90 backdrop-blur">
       <div className="mx-auto flex max-w-[1400px] items-center gap-3 px-4 py-2 sm:px-6">
         <Link href="/" aria-label="Inicio · todas las apps" className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-[var(--ork-purple)] hover:bg-black/5">
           <svg viewBox="0 0 20 20" width="18" height="18" fill="currentColor" aria-hidden="true">
@@ -33,24 +34,25 @@ export function TopBar({ apps, org, memberships, user, unread, pendingApprovals 
         </Link>
 
         {home || !app ? (
-          <Link href="/" className="flex items-center gap-2">
-            <img src="/brand/ork-logo-violet.png" alt="OR-K" className="h-6 w-auto" />
-            <span className="hidden font-display text-lg uppercase tracking-wide text-[var(--ork-ink)] sm:inline">ORKEST</span>
+          <Link href="/" className="flex items-center">
+            <WorkeztLogo size={22} byOrk />
           </Link>
         ) : (
           <div className="flex min-w-0 items-center gap-2">
+            <Link href="/" aria-label="Workezt · inicio" className="hidden shrink-0 sm:block"><WorkeztMark size={18} /></Link>
+            <span className="hidden text-stone-300 sm:inline">/</span>
             <Link href={app.href} className="flex shrink-0 items-center gap-2">
-              <AppIcon name={app.icon} size={24} />
-              <span className="font-display text-lg uppercase tracking-wide text-[var(--ork-ink)]">{app.name}</span>
+              <AppIcon name={app.icon} size={26} />
+              <span className="font-display text-[17px] font-semibold text-[var(--ork-ink)]">{app.name}</span>
             </Link>
             {app.nav.length > 0 && (
-              <nav className="ml-3 hidden items-center gap-0.5 overflow-x-auto md:flex">
+              <nav className="ml-3 hidden items-center gap-0.5 overflow-x-auto [scrollbar-width:none] md:flex">
                 {app.nav.map((n) => {
                   // Activo = el ítem cuya ruta es el prefijo más largo de la ruta actual
                   const best = app.nav.filter((x) => path === x.href || path.startsWith(`${x.href}/`)).sort((a, b) => b.href.length - a.href.length)[0];
                   const active = best?.href === n.href;
                   return (
-                    <Link key={n.href} href={n.href} className={`whitespace-nowrap rounded-md px-2.5 py-1.5 text-sm ${active ? "bg-[var(--ork-purple)] text-white" : "text-stone-700 hover:bg-black/5"}`}>
+                    <Link key={n.href} href={n.href} className={`whitespace-nowrap rounded-full px-3 py-1.5 text-sm ${active ? "bg-[var(--ork-violet)]/10 font-medium text-[var(--ork-purple)]" : "text-stone-600 hover:bg-black/5"}`}>
                       {n.label}
                     </Link>
                   );
@@ -60,8 +62,12 @@ export function TopBar({ apps, org, memberships, user, unread, pendingApprovals 
           </div>
         )}
 
-        <form action="/search" className="ml-auto hidden w-full max-w-xs lg:block">
-          <input name="q" placeholder="Buscar en ORKEST…" className="w-full rounded-full border border-[var(--ork-rule)] bg-white/70 px-4 py-1.5 text-sm outline-none placeholder:text-stone-400 focus:border-[var(--ork-violet)] focus:bg-white" />
+        <form action="/search" className={`hidden w-full lg:block ${home || !app ? "mx-auto max-w-md" : "ml-auto max-w-[220px] xl:max-w-xs"}`}>
+          <label className="relative block">
+            <span className="sr-only">Buscar en Workezt</span>
+            <svg viewBox="0 0 20 20" width="15" height="15" aria-hidden="true" className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400"><circle cx="8.5" cy="8.5" r="5.5" fill="none" stroke="currentColor" strokeWidth="2" /><path d="M13 13l4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
+            <input name="q" placeholder="Buscar en Workezt…" className="w-full rounded-full border border-[var(--ork-violet)]/15 bg-[var(--ork-violet)]/[0.04] py-2 pl-10 pr-4 text-sm outline-none placeholder:text-stone-400 focus:border-[var(--ork-violet)]/50 focus:bg-white" />
+          </label>
         </form>
 
         <div className="ml-auto flex items-center gap-1 lg:ml-0">

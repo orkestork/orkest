@@ -12,7 +12,7 @@ export default async function Templates() {
   const entities = Object.values(ENTITIES).filter((e) => ctx.hasModule(e.module));
   return (
     <>
-      <PageHeader title="Document Templates" crumbs={[{ label: "Studio", href: "/studio" }, { label: "Plantillas" }]} subtitle="Variables disponibles: cualquier campo de la entidad, p. ej. {{number}}, {{customer.name}}, {{total}}, {{customFields.clave}}." />
+      <PageHeader title="Plantillas de documentos" crumbs={[{ label: "Builder", href: "/studio" }, { label: "Plantillas" }]} subtitle="Variables disponibles: cualquier campo de la entidad, p. ej. {{number}}, {{customer.name}}, {{total}}, {{customFields.clave}}." />
       <div className="space-y-6">
         {templates.map((t) => (
           <Card key={t.id} title={`${t.name} · ${ENTITIES[t.entityType]?.label ?? t.entityType}`}>

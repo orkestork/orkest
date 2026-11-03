@@ -20,11 +20,11 @@ export const CORE_PERMISSIONS: PermissionDef[] = [
   { key: "org.users.manage", label: "Gestionar usuarios" },
   { key: "org.roles.manage", label: "Gestionar roles y permisos" },
   { key: "org.modules.manage", label: "Activar / desactivar aplicaciones" },
-  { key: "studio.manage", label: "Usar ORKEST Studio" },
+  { key: "studio.manage", label: "Usar Workezt Builder" },
   { key: "integrations.manage", label: "Integraciones, API keys y webhooks" },
   { key: "audit.read", label: "Ver auditoría" },
   { key: "import.run", label: "Importar datos" },
-  { key: "intelligence.ask", label: "Usar Ask ORKEST" },
+  { key: "intelligence.ask", label: "Usar Ask Workezt" },
   { key: "approvals.override", label: "Decidir cualquier aprobación" },
 ];
 
@@ -40,6 +40,7 @@ export const RESTRICTIONS = [
 /** Alcance de registros: con estas claves el rol solo ve los documentos donde es el responsable. */
 export const SCOPES = [
   { key: "scope:own:sales", module: "sales", label: "Cotizaciones y pedidos", hint: "Solo los que tiene asignados como vendedor" },
+  { key: "scope:own:campaigns", module: "campaigns", label: "Campañas y calendario", hint: "Solo sus campañas y su calendario; lo marca como vendedor en el calendario comercial" },
 ] as const;
 
 export type Restriction = (typeof RESTRICTIONS)[number]["key"] | (typeof SCOPES)[number]["key"];

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- script interno que recorre filas genéricas de la base / XML-RPC */
 /**
  * Copia los datos de Kliniu desde Odoo hacia una organización de ORKEST.
  *

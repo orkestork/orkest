@@ -1,16 +1,17 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { jwtVerify } from "jose";
 
-const PUBLIC = ["/login", "/demo", "/api/v1", "/api/cron", "/api/dev", "/_next", "/favicon"];
+const PUBLIC = ["/login", "/demo", "/api/v1", "/api/cron", "/_next", "/favicon", "/brand"];
 
 /** Exige sesión válida para toda la app. La autorización fina se hace en el servidor (context.ts). */
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
   if (PUBLIC.some((p) => pathname.startsWith(p))) return NextResponse.next();
   const token = req.cookies.get("orkest_session")?.value;
-  if (token) {
+  const secret = process.env.AUTH_SECRET ?? "";
+  if (token && secret.length >= 32) {
     try {
-      await jwtVerify(token, new TextEncoder().encode(process.env.AUTH_SECRET ?? ""));
+      await jwtVerify(token, new TextEncoder().encode(secret));
       return NextResponse.next();
     } catch {}
   }

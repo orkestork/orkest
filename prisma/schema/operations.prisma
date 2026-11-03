@@ -1,0 +1,351 @@
+// ───────────────────────────── OPERACIONES: planta, logística y mantenimiento ─────────────────────────────
+// Máquinas y estaciones de ensamble = WorkCenter (kind MACHINE | ASSEMBLY). Órdenes de producción = ProductionOrder.
+// Repuestos y herramientas de mantenimiento = Product (category "Repuesto" | "Herramienta") con existencias en inventario.
+
+/// Corrida de inyección (planilla diaria por máquina).
+model ProductionRun {
+  id                String    @id @default(cuid())
+  organizationId    String
+  workCenterId      String
+  operatorId        String
+  productId         String?
+  manualProductName String?
+  productionId      String?
+  moldId            String?
+  orderNumber       String
+  productionDate    DateTime
+  startTime         DateTime
+  endTime           DateTime
+  material          String
+  pigment           String?
+  pigmentQuantity   Float?
+  pigmentColor      String?
+  injectionWeight   Float
+  pieceWeight       Float
+  cycle             Float
+  /// seconds | minutes
+  cycleUnit         String    @default("seconds")
+  /// Piezas por ciclo
+  cavities          Int       @default(1)
+  temperature       Float
+  /// simple | zones
+  temperatureType   String    @default("simple")
+  temperatureZones  Json      @default("[]")
+  produced          Int
+  damaged           Int       @default(0)
+  nonConforming     Int       @default(0)
+  couplingTest      String?
+  /// completed | na
+  couplingStatus    String?
+  couplingTime      String?
+  observations      String?
+  downtimeMinutes   Int       @default(0)
+  materialQuantityKg Float?
+  createdAt         DateTime  @default(now())
+
+  @@index([organizationId, productionDate])
+  @@index([organizationId, workCenterId])
+}
+
+/// Corrida de ensamble por estación.
+model AssemblyRun {
+  id             String   @id @default(cuid())
+  organizationId String
+  workCenterId   String
+  leaderId       String
+  productId      String
+  productionId   String?
+  orderNumber    String
+  productionDate DateTime
+  startTime      DateTime
+  endTime        DateTime
+  assembled      Int
+  defective      Int      @default(0)
+  nonConforming  Int      @default(0)
+  reworked       Int      @default(0)
+  workerCount    Int
+  laborHours     Float
+  defectReason   String?
+  observations   String?
+  createdAt      DateTime @default(now())
+
+  @@index([organizationId, productionDate])
+}
+
+/// Catálogo de tiempos estándar por operación (hoja TIEMPOS).
+model StandardOperation {
+  id              String   @id @default(cuid())
+  organizationId  String
+  code            String
+  name            String
+  family          String
+  standardSeconds Float
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+
+  entries ProductionTimeEntry[]
+
+  @@unique([organizationId, code])
+}
+
+/// Registro de tiempos de operarios (control de producción en ensamble/empaque).
+model ProductionTimeEntry {
+  id              String   @id @default(cuid())
+  organizationId  String
+  operatorId      String
+  createdById     String?
+  workDate        DateTime
+  startTime       DateTime
+  endTime         DateTime
+  /// ENSAMBLE | EMPAQUE
+  section         String
+  productionId    String?
+  operationId     String
+  /// Copia del estándar al registrar
+  standardSeconds Float
+  quantity        Int
+  /// Personas que comparten la tarea
+  sharedBy        Int      @default(1)
+  observations    String?
+  createdAt       DateTime @default(now())
+
+  operation StandardOperation @relation(fields: [operationId], references: [id], onDelete: Restrict)
+
+  @@index([organizationId, workDate])
+  @@index([organizationId, operatorId, workDate])
+}
+
+model Mold {
+  id             String   @id @default(cuid())
+  organizationId String
+  code           String
+  name           String
+  /// AVAILABLE | IN_USE | MAINTENANCE
+  status         String   @default("AVAILABLE")
+  createdAt      DateTime @default(now())
+
+  changes MoldChange[]
+
+  @@unique([organizationId, code])
+}
+
+/// Montaje de molde en una máquina; abierto mientras finishedAt es null.
+model MoldChange {
+  id             String    @id @default(cuid())
+  organizationId String
+  workCenterId   String
+  moldId         String
+  startedAt      DateTime
+  finishedAt     DateTime?
+  changedById    String
+  notes          String?
+  createdAt      DateTime  @default(now())
+
+  mold Mold @relation(fields: [moldId], references: [id])
+
+  @@index([organizationId, startedAt])
+  @@index([workCenterId, finishedAt])
+}
+
+// ── Mantenimiento ──
+
+model Equipment {
+  id             String   @id @default(cuid())
+  organizationId String
+  code           String
+  name           String
+  /// MACHINE | MOLD | TOOL | INFRA
+  type           String
+  workCenterId   String?
+  moldId         String?
+  location       String?
+  /// OPERATIVE | DOWN | MAINTENANCE
+  status         String   @default("OPERATIVE")
+  createdAt      DateTime @default(now())
+
+  orders MaintenanceOrder[]
+
+  @@unique([organizationId, code])
+}
+
+model MaintenanceOrder {
+  id                    String    @id @default(cuid())
+  organizationId        String
+  number                String
+  equipmentId           String
+  /// PREVENTIVE | CORRECTIVE
+  type                  String
+  /// LOW | MEDIUM | HIGH | URGENT
+  priority              String    @default("MEDIUM")
+  /// PENDING | IN_PROGRESS | DONE | CANCELLED
+  status                String    @default("PENDING")
+  reportedAt            DateTime  @default(now())
+  startedAt             DateTime?
+  completedAt           DateTime?
+  downtimeMinutes       Int?
+  description           String
+  resolution            String?
+  /// Firma de quien recibe (PNG data URL)
+  signatureData         String?
+  signedByName          String?
+  signedAt              DateTime?
+  /// Firma del técnico que ejecutó
+  executorSignatureData String?
+  executorName          String?
+  reportedById          String
+  assignedToId          String?
+  createdAt             DateTime  @default(now())
+
+  equipment Equipment          @relation(fields: [equipmentId], references: [id])
+  quotes    MaintenanceQuote[]
+
+  @@unique([organizationId, number])
+  @@index([organizationId, status])
+}
+
+model MaintenanceQuote {
+  id                 String            @id @default(cuid())
+  organizationId     String
+  maintenanceOrderId String?
+  supplierId         String?
+  supplier           String
+  description        String
+  amount             Decimal           @db.Decimal(18, 2)
+  /// REQUESTED | APPROVED | REJECTED | PURCHASED
+  status             String            @default("REQUESTED")
+  createdAt          DateTime          @default(now())
+
+  maintenanceOrder MaintenanceOrder? @relation(fields: [maintenanceOrderId], references: [id])
+}
+
+// ── Logística ──
+
+model Driver {
+  id             String   @id @default(cuid())
+  organizationId String
+  fullName       String
+  phone          String?
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+}
+
+model Vehicle {
+  id                 String    @id @default(cuid())
+  organizationId     String
+  plate              String
+  /// CAMIONETA | MOTO | FURGON | CAMION
+  type               String
+  active             Boolean   @default(true)
+  soatDue            DateTime?
+  technicalReviewDue DateTime?
+  policyDue          DateTime?
+  operationCardDue   DateTime?
+  extinguisherDue    DateTime?
+  createdAt          DateTime  @default(now())
+
+  @@unique([organizationId, plate])
+}
+
+/// Revisión diaria pre-operacional (B = bueno, M = malo, NA).
+model VehicleChecklistEntry {
+  id             String   @id @default(cuid())
+  organizationId String
+  vehicleId      String
+  driverId       String
+  date           DateTime
+  items          Json
+  initials       String?
+  notes          String?
+  createdById    String
+  createdAt      DateTime @default(now())
+
+  @@unique([vehicleId, date])
+  @@index([organizationId, date])
+}
+
+model DeliveryRoute {
+  id             String   @id @default(cuid())
+  organizationId String
+  number         String
+  date           DateTime
+  vehicleId      String
+  driverId       String
+  /// PLANNED | IN_PROGRESS | DONE
+  status         String   @default("PLANNED")
+  notes          String?
+  createdById    String
+  createdAt      DateTime @default(now())
+
+  stops DeliveryStop[]
+
+  @@unique([organizationId, number])
+  @@index([organizationId, date])
+}
+
+/// Parada de una ruta: un pedido de venta o una entrega manual a un cliente.
+model DeliveryStop {
+  id           String   @id @default(cuid())
+  routeId      String
+  salesOrderId String?
+  customerId   String?
+  name         String
+  phone        String?
+  address      String
+  city         String
+  position     Int      @default(0)
+  /// PENDING | DELIVERED | FAILED
+  status       String   @default("PENDING")
+  notes        String?
+
+  route DeliveryRoute @relation(fields: [routeId], references: [id], onDelete: Cascade)
+
+  @@index([salesOrderId])
+}
+
+model TransportCost {
+  id             String   @id @default(cuid())
+  organizationId String
+  vehicleId      String
+  date           DateTime
+  /// COMBUSTIBLE | MANTENIMIENTO | PEAJES | OTRO
+  category       String
+  amount         Decimal  @db.Decimal(18, 2)
+  notes          String?
+  createdById    String
+  createdAt      DateTime @default(now())
+
+  @@index([organizationId, date])
+}
+
+model TransportIncident {
+  id               String   @id @default(cuid())
+  organizationId   String
+  vehicleId        String?
+  driverId         String?
+  date             DateTime
+  type             String
+  description      String
+  correctiveAction String?
+  /// OPEN | RESOLVED
+  status           String   @default("OPEN")
+  createdById      String
+  createdAt        DateTime @default(now())
+
+  @@index([organizationId, date])
+}
+
+/// Informe de periodo de un área de operaciones con foto de sus indicadores.
+model OperationsReport {
+  id             String   @id @default(cuid())
+  organizationId String
+  /// logistics | maintenance | manufacturing | inventory
+  module         String
+  periodStart    DateTime
+  periodEnd      DateTime
+  authorId       String
+  kpis           Json
+  notes          String?
+  createdAt      DateTime @default(now())
+
+  @@index([organizationId, module, periodStart])
+}

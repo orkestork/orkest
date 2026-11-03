@@ -22,7 +22,7 @@ export default async function NewCustomRecord({ params }: PageProps<"/x/[entity]
     <>
       <PageHeader title={`Nuevo · ${ent.label}`} crumbs={[{ label: ent.labelPlural, href: `/x/${key}` }, { label: "Nuevo" }]} />
       <Card>
-        {defs.length === 0 ? <Empty title="Este objeto aún no tiene campos">Defínelos en Studio → Campos.</Empty> : (
+        {defs.length === 0 ? <Empty title="Este objeto aún no tiene campos">Defínelos en Builder → Campos.</Empty> : (
           <ActionForm action={saveRecord} className="space-y-6">
             <input type="hidden" name="entityKey" value={key} />
             <CustomFieldInputs defs={defs} users={users} relations={relations} legend={null} />

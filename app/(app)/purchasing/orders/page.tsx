@@ -16,7 +16,7 @@ const n = (v: unknown) => Number(v ?? 0);
 type Po = Awaited<ReturnType<typeof load>>[number];
 const load = (ctx: Awaited<ReturnType<typeof requireModule>>) => ctx.db.purchaseOrder.findMany({ include: { supplier: true }, orderBy: { createdAt: "desc" }, take: 3000 });
 
-/** Segmentos del tablero de compras (como el encabezado de Odoo). */
+/** Segmentos del tablero de compras. */
 const now = () => new Date();
 const SEGMENTS: { key: string; label: string; tone: string; test: (p: Po) => boolean }[] = [
   { key: "new", label: "Nuevo", tone: "bg-cyan-100 text-cyan-950", test: (p) => p.status === "draft" },

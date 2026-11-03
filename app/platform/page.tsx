@@ -4,6 +4,7 @@ import { requirePlatformAdmin } from "@/lib/core/context";
 import { Badge, Card, Stat } from "@/components/ui";
 import { logout } from "@/app/login/actions";
 import { platformOrgAction } from "./actions";
+import { nowMs } from "@/lib/ui/clock";
 
 export const metadata = { title: "Panel OR-K" };
 
@@ -18,7 +19,7 @@ export default async function Platform() {
     prisma.plan.findMany(), prisma.featureFlag.findMany(), prisma.user.count(),
     prisma.platformAuditLog.findMany({ orderBy: { createdAt: "desc" }, take: 10 }),
   ]);
-  const since = new Date(Date.now() - 30 * 86400000);
+  const since = new Date(nowMs() - 30 * 86400000);
   const usage = await Promise.all(orgs.map(async (o) => ({
     id: o.id,
     events: await prisma.domainEvent.count({ where: { organizationId: o.id, createdAt: { gte: since } } }),
@@ -33,7 +34,7 @@ export default async function Platform() {
         <div className="mb-8 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <img src="/brand/ork-logo-violet.png" alt="OR-K" className="h-8 w-auto" />
-            <span className="font-display text-2xl uppercase tracking-tight">Panel ORKEST</span>
+            <span className="font-display text-2xl uppercase tracking-tight">Panel Workezt · OR-K</span>
           </div>
           <div className="flex items-center gap-4 text-sm">
             <span className="text-stone-600">{admin.name}</span>

@@ -7,9 +7,16 @@ const MAX_AGE = 60 * 60 * 24 * 7;
 
 export type SessionPayload = { sub: string; org?: string };
 
-function secret() {
-  return new TextEncoder().encode(process.env.AUTH_SECRET ?? "");
+/**
+ * Clave de firma de sesiones. Sin AUTH_SECRET (mín. 32 caracteres) nadie puede iniciar sesión:
+ * firmar con una clave vacía permitiría fabricar sesiones de cualquier usuario.
+ */
+export function authSecret() {
+  const s = process.env.AUTH_SECRET ?? "";
+  if (s.length < 32) throw new Error("AUTH_SECRET no está configurado o es demasiado corto (mínimo 32 caracteres)");
+  return new TextEncoder().encode(s);
 }
+const secret = authSecret;
 
 export async function signSession(payload: SessionPayload) {
   return new SignJWT({ org: payload.org })

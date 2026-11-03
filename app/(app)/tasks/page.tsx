@@ -3,6 +3,7 @@ import { requireContext, actionContext } from "@/lib/core/context";
 import { orgUsers } from "@/lib/core/members";
 import { Badge, btn, Card, PageHeader } from "@/components/ui";
 import { date } from "@/lib/ui/format";
+import { nowMs } from "@/lib/ui/clock";
 
 export const metadata = { title: "Tareas" };
 
@@ -44,7 +45,7 @@ export default async function Tasks({ searchParams }: PageProps<"/tasks">) {
       <Card padded={false}>
         <ul className="divide-y divide-slate-100">
           {tasks.map((t) => {
-            const late = t.dueDate && t.dueDate.getTime() < Date.now();
+            const late = t.dueDate && t.dueDate.getTime() < nowMs();
             return (
               <li key={t.id} className="flex items-center gap-3 px-5 py-3">
                 <form action={complete}><input type="hidden" name="id" value={t.id} /><button aria-label="Completar" className="h-5 w-5 rounded border border-slate-300 hover:border-emerald-500 hover:bg-emerald-50" /></form>

@@ -26,7 +26,8 @@ export default async function InvoiceDetail({ params }: PageProps<"/invoicing/[i
     <>
       <PageHeader title={`${inv.type === "OUT_REFUND" ? "Nota crédito" : "Factura"} ${inv.number}`} crumbs={[{ label: "Facturas", href: "/invoicing" }, { label: inv.number }]}
         subtitle={<span className="flex flex-wrap items-center gap-2">{inv.customer.name} · emitida {date(inv.issuedAt)} · vence {date(inv.dueDate)}{term ? ` · ${term.name}` : ""}
-          <Badge tone={inv.status === "paid" ? "emerald" : "blue"}>{inv.status === "paid" ? "Pagada" : "Abierta"}</Badge></span>} />
+          <Badge tone={inv.status === "paid" ? "emerald" : "blue"}>{inv.status === "paid" ? "Pagada" : "Abierta"}</Badge></span>}
+        actions={<Link href={`/invoicing/${inv.id}/print`} target="_blank" className={btn.small}>Imprimir / PDF</Link>} />
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
           <Card padded={false}>

@@ -31,7 +31,7 @@ export async function ActivityTimeline({ ctx, entityType, entityId, canWrite }: 
             <li key={a.id} className="relative">
               <span className={`absolute -left-[21px] top-1.5 h-2 w-2 rounded-full ${a.type === "SYSTEM" ? "bg-slate-300" : "bg-[var(--brand)]"}`} />
               <p className="text-sm text-slate-700">{a.content}</p>
-              <p className="text-xs text-slate-400">{TYPE_LABEL[a.type] ?? a.type} · {a.userId ? users.get(a.userId) : "ORKEST"} · {dateTime(a.createdAt)}</p>
+              <p className="text-xs text-slate-400">{TYPE_LABEL[a.type] ?? a.type} · {a.userId ? users.get(a.userId) : "Workezt"} · {dateTime(a.createdAt)}</p>
             </li>
           ))}
         </ol>

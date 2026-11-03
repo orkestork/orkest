@@ -19,7 +19,7 @@ export default async function Dashboards() {
   const on = (w: WidgetTemplate) => current.some((c) => c.type === w.type && c.metric === w.metric);
   return (
     <>
-      <PageHeader title="Dashboard de inicio" crumbs={[{ label: "Studio", href: "/studio" }, { label: "Dashboards" }]} subtitle="Cada usuario solo verá los widgets de apps activas y para los que su rol tiene permiso." />
+      <PageHeader title="Dashboard de inicio" crumbs={[{ label: "Builder", href: "/studio" }, { label: "Dashboards" }]} subtitle="Cada usuario solo verá los widgets de apps activas y para los que su rol tiene permiso." />
       <Card className="max-w-xl">
         <form action={saveDashboard} className="space-y-2">
           {options.map((w) => (

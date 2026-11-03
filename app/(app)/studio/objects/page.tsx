@@ -16,7 +16,7 @@ export default async function CustomObjects() {
   const fc = (t: string) => fields.find((f) => f.entityType === t)?._count ?? 0;
   return (
     <>
-      <PageHeader title="Objetos personalizados" crumbs={[{ label: "Studio", href: "/studio" }, { label: "Objetos" }]}
+      <PageHeader title="Objetos personalizados" crumbs={[{ label: "Builder", href: "/studio" }, { label: "Objetos" }]}
         subtitle="Crea entidades propias de la empresa (visitas técnicas, solicitudes internas, inspecciones…) con campos, líneas, workflow, permisos y automatizaciones. Aparecen como una app más en el inicio." />
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="grid content-start gap-4 sm:grid-cols-2 lg:col-span-2">

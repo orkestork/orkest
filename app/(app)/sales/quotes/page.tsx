@@ -10,6 +10,7 @@ import { money } from "@/lib/ui/format";
 import { dateWhere, parseList } from "@/lib/ui/list-query";
 import { applyDefaultFavorite, listFavorites } from "@/lib/ui/favorites";
 import { ownerScope } from "@/lib/core/scope";
+import { nowMs } from "@/lib/ui/clock";
 
 export const metadata = { title: "Cotizaciones" };
 const PAGE = 80;
@@ -39,7 +40,7 @@ export default async function Quotes({ searchParams }: PageProps<"/sales/quotes"
   if (active.includes("mine")) where.ownerId = ctx.user.id;
   if (active.includes("open")) where.status = { in: statusKeys.length ? statusKeys : ["draft", "sent", "pending_approval", "approved"] };
   if (active.includes("month")) { const d = new Date(); d.setDate(1); d.setHours(0, 0, 0, 0); where.createdAt = { gte: d }; }
-  if (active.includes("30d")) where.createdAt = { gte: new Date(Date.now() - 30 * DAY) };
+  if (active.includes("30d")) where.createdAt = { gte: new Date(nowMs() - 30 * DAY) };
   // Búsqueda por campo (valores del mismo campo → O) y fechas
   const ci = (v: string) => ({ contains: v, mode: "insensitive" as const });
   const searchBy: Record<string, (v: string) => Record<string, unknown>> = {
@@ -143,7 +144,7 @@ export default async function Quotes({ searchParams }: PageProps<"/sales/quotes"
           { group: "fecha", options: [{ key: "month", label: "Este mes" }, { key: "30d", label: "Últimos 30 días" }] },
         ]}
         groupBys={[{ key: "customer", label: "Cliente" }, { key: "owner", label: "Vendedor" }, { key: "status", label: "Estado" }, { key: "month", label: "Mes de creación" }]}
-        views={[{ key: "list", label: "Lista", icon: "list" }, { key: "kanban", label: "Kanban", icon: "kanban" }, { key: "graph", label: "Gráfico", icon: "graph" }]}
+        views={[{ key: "list", label: "Lista", icon: "list" }, { key: "kanban", label: "Tablero", icon: "kanban" }, { key: "graph", label: "Gráfico", icon: "graph" }]}
         pager={view === "list" && !group ? { from: data.length ? (page - 1) * PAGE + 1 : 0, to: Math.min(page * PAGE, data.length), total: data.length } : undefined}
       />
 

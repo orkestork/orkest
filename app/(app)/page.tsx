@@ -17,23 +17,35 @@ export default async function Home() {
   ]);
   const chips = [
     alerts > 0 && { href: "/radar", label: `${alerts} alertas importantes en Radar`, tone: "bg-[var(--ork-pink)] text-white" },
-    approvals > 0 && { href: "/approvals", label: `${approvals} aprobaciones esperan por ti`, tone: "bg-[var(--ork-purple)] text-white" },
+    approvals > 0 && { href: "/approvals", label: `${approvals} aprobaciones esperan por ti`, tone: "bg-[var(--ork-violet)] text-white" },
     tasks > 0 && { href: "/tasks", label: `${tasks} tareas abiertas`, tone: "bg-white text-[var(--ork-ink)] border border-[var(--ork-rule)]" },
   ].filter(Boolean) as { href: string; label: string; tone: string }[];
 
   return (
-    <div className="mx-auto max-w-[920px] pb-20 pt-6 sm:pt-12">
+    <div className="pb-20">
+      <section className="wz-hero relative -mx-4 -mt-6 overflow-hidden sm:-mx-6 sm:mt-0 sm:rounded-3xl">
+        {/* eslint-disable-next-line @next/next/no-img-element -- imagen estática de marca */}
+        <img src="/brand/workezt-orca.jpg" alt="" className="absolute inset-y-0 right-0 h-full w-auto max-w-none opacity-60 [mask-image:linear-gradient(90deg,transparent,#000_30%)] sm:opacity-100" />
+        <div className="relative px-6 py-9 sm:px-10 sm:py-12">
+          <h1 className="font-display text-3xl font-bold tracking-tight text-white sm:text-[40px]">
+            Tu empresa, en arm<span className="text-[#c4a6ff]">onía.</span>
+          </h1>
+          <p className="mt-2 text-sm tracking-[0.22em] text-white/70 sm:text-base">Understand · Transform · Scale</p>
+        </div>
+      </section>
+
       {chips.length > 0 && (
-        <div className="flex flex-wrap justify-center gap-2">
+        <div className="mt-6 flex flex-wrap gap-2">
           {chips.map((c) => <Link key={c.href} href={c.href} className={`rounded-full px-4 py-1.5 text-sm font-medium transition hover:scale-[1.03] ${c.tone}`}>{c.label} →</Link>)}
         </div>
       )}
 
-      <div className="mt-10 grid grid-cols-3 gap-x-3 gap-y-9 sm:grid-cols-4 md:grid-cols-6">
+      <h2 className="mt-8 font-display text-2xl font-bold text-[var(--ork-ink)] sm:text-3xl">Aplicaciones</h2>
+      <div className="mx-auto mt-6 grid max-w-[1000px] grid-cols-3 gap-x-3 gap-y-8 sm:grid-cols-4 md:grid-cols-6">
         {apps.map((a) => (
-          <Link key={a.key} href={a.href} className="flex flex-col items-center gap-3 rounded-3xl text-center outline-none">
+          <Link key={a.key} href={a.href} className="flex flex-col items-center gap-2.5 rounded-3xl text-center outline-none focus-visible:ring-2 focus-visible:ring-[var(--ork-violet)]">
             <span className="app-tile grid h-[84px] w-[84px] place-items-center sm:h-[96px] sm:w-[96px]">
-              <AppIcon name={a.icon} size={58} />
+              <AppIcon name={a.icon} size={76} />
             </span>
             <span className="max-w-[124px] text-[13px] font-medium leading-tight text-stone-800">{a.name}</span>
           </Link>

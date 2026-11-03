@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- script interno que recorre filas genéricas de la base / XML-RPC */
 import "dotenv/config";
 import { prisma } from "@/lib/core/prisma";
 async function main() {

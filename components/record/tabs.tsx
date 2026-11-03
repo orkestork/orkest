@@ -2,14 +2,15 @@
 
 import { useState, type ReactNode } from "react";
 
+/** Secciones de una ficha como control segmentado (pastillas). */
 export function Tabs({ tabs }: { tabs: { key: string; label: string; content: ReactNode }[] }) {
   const [active, setActive] = useState(tabs[0]?.key);
   return (
     <div>
-      <div role="tablist" className="flex gap-1 border-b border-stone-200">
+      <div role="tablist" className="inline-flex flex-wrap gap-1 rounded-full bg-stone-100 p-1">
         {tabs.map((t) => (
-          <button key={t.key} role="tab" aria-selected={active === t.key} onClick={() => setActive(t.key)}
-            className={`-mb-px rounded-t-lg border px-4 py-2 text-sm ${active === t.key ? "border-stone-200 border-b-white bg-white font-semibold text-stone-900" : "border-transparent text-stone-600 hover:text-stone-900"}`}>
+          <button key={t.key} role="tab" type="button" aria-selected={active === t.key} onClick={() => setActive(t.key)}
+            className={`rounded-full px-4 py-1.5 text-sm transition ${active === t.key ? "bg-white font-semibold text-[var(--ork-purple)] shadow-sm" : "text-stone-600 hover:text-stone-900"}`}>
             {t.label}
           </button>
         ))}

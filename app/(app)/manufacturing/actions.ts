@@ -47,7 +47,7 @@ export async function saveWorkCenter(_: ActionResult, form: FormData): Promise<A
   return safeAction(async () => {
     const ctx = await actionContext("manufacturing.write", "manufacturing");
     if (!s(form, "code") || !s(form, "name")) return { error: "Código y nombre son obligatorios" };
-    await ctx.db.workCenter.create({ data: { organizationId: ctx.orgId, code: s(form, "code").toUpperCase(), name: s(form, "name"), costPerHour: Number(s(form, "costPerHour") || 0), capacity: Number(s(form, "capacity") || 1) } });
+    await ctx.db.workCenter.create({ data: { organizationId: ctx.orgId, code: s(form, "code").toUpperCase(), name: s(form, "name"), costPerHour: Number(s(form, "costPerHour") || 0), capacity: Number(s(form, "capacity") || 1), kind: ["MACHINE", "ASSEMBLY"].includes(s(form, "kind")) ? s(form, "kind") : "GENERAL", brand: s(form, "brand") || null, model: s(form, "model") || null, location: s(form, "location") || null } });
     revalidatePath("/manufacturing/workcenters");
     return { ok: "Centro de trabajo creado" };
   });

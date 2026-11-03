@@ -9,6 +9,7 @@ import { date, money, num } from "@/lib/ui/format";
 import { RULE_ACTION } from "@/lib/ui/stock-labels";
 import { ProductForm } from "../product-form";
 import { toggleArchive } from "../actions";
+import { nowMs } from "@/lib/ui/clock";
 
 const n = (v: unknown) => Number(v ?? 0);
 const YEAR = 365 * 86400000;
@@ -18,7 +19,7 @@ export default async function ProductDetail({ params }: PageProps<"/products/[id
   const { id } = await params;
   const p = await ctx.db.product.findUnique({ where: { id } });
   if (!p) notFound();
-  const since = new Date(Date.now() - YEAR);
+  const since = new Date(nowMs() - YEAR);
   const [defs, cats, suppliers, order, soLines, poLines, boms, rules, quants, warehouses] = await Promise.all([
     getFieldDefs(ctx.db, "product"),
     ctx.db.product.findMany({ where: { category: { not: null } }, distinct: ["category"], select: { category: true } }),
@@ -70,15 +71,15 @@ export default async function ProductDetail({ params }: PageProps<"/products/[id
     <>
       <RecordTopBar listLabel="Productos" listHref="/products" title={`[${p.sku}] ${p.name}`} newHref={ctx.can("products.write") ? "/products/new" : undefined} smart={smart}
         pager={{ index: idx + 1, total: order.length, prevHref: idx > 0 ? `/products/${order[idx - 1].id}` : undefined, nextHref: idx < order.length - 1 ? `/products/${order[idx + 1].id}` : undefined }} />
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
+      <div className="mx-auto max-w-[1180px] space-y-6">
         <div className="min-w-0 space-y-3">
-          <div className="flex items-center justify-between gap-3 rounded-xl border border-[var(--ork-rule)] bg-white/80 p-2">
-            <div className="flex gap-1.5">
-              {ctx.hasModule("sales") && p.canBeSold && <Link href={`/sales/quotes/new`} className="rounded-lg bg-stone-200/70 px-3 py-1.5 text-sm font-medium hover:bg-stone-200">Cotizar</Link>}
-              {ctx.hasModule("manufacturing") && boms > 0 && <Link href={`/manufacturing/orders/new?productId=${p.id}`} className="rounded-lg bg-stone-200/70 px-3 py-1.5 text-sm font-medium hover:bg-stone-200">Producir</Link>}
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            <div className="order-2 flex gap-2">
+              {ctx.hasModule("sales") && p.canBeSold && <Link href={`/sales/quotes/new`} className="rounded-full border border-[var(--ork-rule)] bg-white px-4 py-1.5 text-sm font-medium text-stone-700 hover:border-[var(--ork-violet)]/50">Cotizar</Link>}
+              {ctx.hasModule("manufacturing") && boms > 0 && <Link href={`/manufacturing/orders/new?productId=${p.id}`} className="rounded-full border border-[var(--ork-rule)] bg-white px-4 py-1.5 text-sm font-medium text-stone-700 hover:border-[var(--ork-violet)]/50">Producir</Link>}
               {ctx.can("products.write") && (
                 <form action={toggleArchive}><input type="hidden" name="id" value={p.id} /><input type="hidden" name="active" value={p.active ? "0" : "1"} />
-                  <button className="rounded-lg bg-stone-200/70 px-3 py-1.5 text-sm font-medium hover:bg-stone-200">{p.active ? "Archivar" : "Restaurar"}</button></form>
+                  <button className="rounded-full border border-[var(--ork-rule)] bg-white px-4 py-1.5 text-sm font-medium text-stone-700 hover:border-[var(--ork-violet)]/50">{p.active ? "Archivar" : "Restaurar"}</button></form>
               )}
             </div>
             {!p.active && <StatusPill label="Archivado" tone="slate" />}
@@ -86,9 +87,7 @@ export default async function ProductDetail({ params }: PageProps<"/products/[id
           <ProductForm key={String(p.price) + (ctx.restricted("deny:costs") ? "" : String(p.cost)) + p.name} hideCost={ctx.restricted("deny:costs")} product={ctx.restricted("deny:costs") ? { ...p, cost: 0 } : p} defs={defs} suppliers={suppliers} categories={cats.map((c) => c.category!)} canWrite={ctx.can("products.write")}
             salesTab={salesTab} purchaseTab={purchaseTab} inventoryTab={inventoryTab} />
         </div>
-        <div className="xl:sticky xl:top-20 xl:max-h-[calc(100vh-6rem)] xl:overflow-y-auto xl:pr-1">
-          <Chatter ctx={ctx} entityType="product" entityId={p.id} canWrite={ctx.can("products.write")} />
-        </div>
+        <Chatter ctx={ctx} entityType="product" entityId={p.id} canWrite={ctx.can("products.write")} />
       </div>
     </>
   );

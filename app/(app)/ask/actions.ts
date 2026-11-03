@@ -7,10 +7,10 @@ import { ask } from "@/lib/intelligence/tools";
 
 export type AskResult = { text: string; tools: string[]; mode: "claude" | "basic"; error?: boolean };
 
-/** Pregunta a Ask ORKEST. Con ANTHROPIC_API_KEY usa Claude; sin ella, el planificador básico por palabras clave. */
+/** Pregunta a Ask Workezt. Con ANTHROPIC_API_KEY usa Claude; sin ella, el planificador básico por palabras clave. */
 export async function askOrkest(history: ChatTurn[], question: string): Promise<AskResult> {
   const ctx = await actionContext("intelligence.ask");
-  if (!ctx.flags.has("intelligence.ask")) throw new Error("Ask ORKEST no está habilitado");
+  if (!ctx.flags.has("intelligence.ask")) throw new Error("Ask Workezt no está habilitado");
   const q = question.trim().slice(0, 2000);
   if (!q) return { text: "Escribe una pregunta.", tools: [], mode: "basic" };
 

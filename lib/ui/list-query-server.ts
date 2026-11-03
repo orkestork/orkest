@@ -2,7 +2,7 @@ import { Prisma } from "@/lib/generated/prisma/client";
 import type { FieldKind } from "./list-query";
 
 /**
- * Condición sobre un campo de Studio (JSON customFields), con la semántica de Odoo:
+ * Condición sobre un campo personalizado (JSON customFields):
  * "no es" / "no contiene" / "es falso" incluyen los registros donde el campo no está establecido.
  * (Solo servidor: usa el runtime de Prisma.)
  */

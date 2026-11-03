@@ -16,7 +16,7 @@ export default async function Sonar() {
   ]);
   return (
     <>
-      <PageHeader title="ORKEST Sonar" subtitle="Sesiones para convertir conocimiento empresarial en capacidades estructuradas: hallazgos, problemas, decisiones, acciones, procesos y riesgos." />
+      <PageHeader title="Workezt Sonar" subtitle="Sesiones para convertir conocimiento empresarial en capacidades estructuradas: hallazgos, problemas, decisiones, acciones, procesos y riesgos." />
       <div className="grid gap-6 lg:grid-cols-3">
         <Card padded={false} className="lg:col-span-2">
           <Table head={["Sesión", "Área", "Registros", "Estado", "Fecha"]} empty={sessions.length === 0}>

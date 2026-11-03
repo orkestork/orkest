@@ -4,7 +4,7 @@ import { useEffect, useId, useRef, useState, useTransition } from "react";
 import type { LookupItem } from "@/app/(app)/lookup-actions";
 
 /**
- * Selector con autocompletar (como los campos relacionales de Odoo): busca en el servidor mientras escribes,
+ * Selector con autocompletar para campos relacionados: busca en el servidor mientras escribes,
  * se maneja con teclado y, si se permite, ofrece «Crear "texto"». Envía el id en un input oculto `name`.
  */
 export function RecordPicker({ name, initial, search, create, onChange, placeholder = "Escribe para buscar…", required, disabled, className = "", label }: {

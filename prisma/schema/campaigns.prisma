@@ -1,0 +1,102 @@
+// ───────────────────────────── APP: Campañas y calendario comercial ─────────────────────────────
+// Campañas de pauta por vendedor con matriz diaria (mensajes, transacciones, presupuesto USD, venta),
+// y calendario de cumplimiento del reporte diario. Vendedor = usuario (User.id); producto opcional
+// (Product.id). Las fechas de día se guardan como DATE en el calendario local de la organización.
+
+model Campaign {
+  id             String    @id @default(cuid())
+  organizationId String
+  name           String
+  sellerId       String
+  productId      String?
+  investment     Float     @default(0) // USD, manual cuando no hay matriz diaria
+  sales          Float     @default(0) // moneda de la organización, manual cuando no hay matriz diaria
+  leads          Int       @default(0)
+  targetMultiple Float     @default(10)
+  status         String    @default("ACTIVE") // ACTIVE | PAUSED
+  platform       String    @default("Meta Ads")
+  startDate      DateTime  @default(now())
+  endDate        DateTime?
+  notes          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  dailyEntries CampaignDaily[]
+
+  @@index([organizationId, sellerId])
+  @@index([organizationId, createdAt])
+}
+
+model CampaignDaily {
+  id                    String   @id @default(cuid())
+  organizationId        String
+  campaignId            String
+  fecha                 DateTime @db.Date
+  mensajes              Int      @default(0)
+  transacciones         Int      @default(0)
+  presupuestoPublicidad Float    @default(0) // USD
+  ventaDelDia           Float    @default(0)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, fecha])
+  @@index([organizationId, fecha])
+}
+
+/// Cierre del día de un vendedor (incluye "sin ventas" confirmado). Uno por vendedor y fecha.
+model SellerDailyClose {
+  id             String   @id @default(cuid())
+  organizationId String
+  sellerId       String
+  date           DateTime @db.Date
+  noSales        Boolean  @default(false)
+  totalSold      Float    @default(0)
+  closedAt       DateTime @default(now())
+  closedById     String
+
+  @@unique([organizationId, sellerId, date])
+}
+
+/// Log append-only: cuándo y quién registró ventas o cerró el día (mide reportes con retraso).
+model SellerReportEvent {
+  id             String   @id @default(cuid())
+  organizationId String
+  sellerId       String
+  date           DateTime @db.Date
+  campaignId     String?
+  kind           String // SALES | CLOSE
+  value          Float    @default(0)
+  actorId        String
+  createdAt      DateTime @default(now())
+
+  @@index([organizationId, sellerId, date])
+}
+
+model CalendarConfig {
+  id                String   @id @default(cuid())
+  organizationId    String   @unique
+  deadlineMinutes   Int      @default(1200) // hora límite de reporte, minutos desde medianoche local
+  trackingStartDate DateTime @db.Date
+  updatedAt         DateTime @updatedAt
+}
+
+model SellerCalendarSetting {
+  id             String  @id @default(cuid())
+  organizationId String
+  userId         String
+  workDays       Int[]   @default([1, 2, 3, 4, 5, 6]) // 0 = domingo
+  active         Boolean @default(true)
+
+  @@unique([organizationId, userId])
+}
+
+model CalendarHoliday {
+  id             String   @id @default(cuid())
+  organizationId String
+  date           DateTime @db.Date
+  label          String
+
+  @@unique([organizationId, date])
+}

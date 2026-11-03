@@ -15,7 +15,7 @@ export async function listFavorites(ctx: OrgContext, entityType: string): Promis
 
 /**
  * Al entrar a la lista sin parámetros (desde el menú) aplica el favorito predeterminado,
- * igual que Odoo: primero el del usuario, si no, el compartido.
+ * primero el del usuario; si no, el compartido.
  */
 export function applyDefaultFavorite(favorites: Favorite[], isEmpty: boolean, path: string) {
   if (!isEmpty) return;

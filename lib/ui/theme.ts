@@ -2,7 +2,7 @@
  * Apariencia por organización (se guarda en Organization.branding.theme).
  * Todo se aplica con variables CSS sobre el lienzo de la app, así que no hay estilos por cliente en el código.
  */
-export type IconPack = "duo" | "line" | "glyph";
+export type IconPack = "area" | "duo" | "line" | "glyph";
 export type IconPalette = "ork" | "ocean" | "forest" | "sunset" | "brand";
 export type Theme = {
   primary: string; accent: string; highlight: string; soft: string; background: string; text: string;
@@ -12,14 +12,23 @@ export type Theme = {
   iconPalette: IconPalette;
 };
 
+/** Workezt (propuesta A, 26 oct 2026): fondo claro, acentos violeta e íconos 3D con color por área. */
 export const DEFAULT_THEME: Theme = {
+  primary: "#5b21b6", accent: "#7c3aed", highlight: "#e5484d", soft: "#c4b5fd", background: "#f6f7fb", text: "#15122e",
+  canvas: "plain", tiles: "flat", iconPack: "area", iconPalette: "ork",
+};
+
+/** Tema anterior de OR-K (papel cálido). Se ofrece como preset. */
+const ORK_CLASSIC: Theme = {
   primary: "#32125e", accent: "#6f35b5", highlight: "#e31572", soft: "#bda5ff", background: "#f7f1e7", text: "#11100f",
   canvas: "orbs", tiles: "card", iconPack: "duo", iconPalette: "ork",
 };
+const sameTheme = (a: Partial<Theme>, b: Theme) => (Object.keys(b) as (keyof Theme)[]).every((k) => a[k] === b[k]);
 
 /** Temas listos para aplicar con un clic. */
 export const PRESETS: { key: string; name: string; theme: Theme }[] = [
-  { key: "ork", name: "OR-K (predeterminado)", theme: DEFAULT_THEME },
+  { key: "workezt", name: "Workezt (predeterminado)", theme: DEFAULT_THEME },
+  { key: "ork", name: "OR-K clásico", theme: ORK_CLASSIC },
   { key: "ocean", name: "Océano", theme: { primary: "#0b2545", accent: "#1d6fb8", highlight: "#ff6b4a", soft: "#9cc9f0", background: "#f3f7fb", text: "#0d1b2a", canvas: "orbs", tiles: "card", iconPack: "duo", iconPalette: "ocean" } },
   { key: "forest", name: "Bosque", theme: { primary: "#1f3d2b", accent: "#2f7d4f", highlight: "#e0a526", soft: "#a8d5b5", background: "#f5f6ef", text: "#14201a", canvas: "plain", tiles: "tinted", iconPack: "duo", iconPalette: "forest" } },
   { key: "sunset", name: "Atardecer", theme: { primary: "#4a1d2f", accent: "#c2410c", highlight: "#db2777", soft: "#fdba74", background: "#fff7ed", text: "#1c1210", canvas: "orbs", tiles: "card", iconPack: "glyph", iconPalette: "sunset" } },
@@ -40,14 +49,15 @@ const pick = <T extends string>(v: unknown, allowed: readonly T[], d: T): T => (
 
 /** Normaliza lo guardado (o lo enviado) a un tema válido. */
 export function normalizeTheme(raw: unknown, fallbackPrimary?: string): Theme {
-  const r = (raw ?? {}) as Partial<Theme>;
+  // Quien guardó el tema por defecto anterior pasa al nuevo predeterminado de Workezt
+  const r = (raw && sameTheme(raw as Partial<Theme>, ORK_CLASSIC) ? {} : raw ?? {}) as Partial<Theme>;
   const color = (k: keyof Theme) => (typeof r[k] === "string" && HEX.test(r[k] as string) ? (r[k] as string) : (DEFAULT_THEME[k] as string));
   return {
     primary: typeof r.primary === "string" && HEX.test(r.primary) ? r.primary : fallbackPrimary && HEX.test(fallbackPrimary) ? fallbackPrimary : DEFAULT_THEME.primary,
     accent: color("accent"), highlight: color("highlight"), soft: color("soft"), background: color("background"), text: color("text"),
-    canvas: pick(r.canvas, ["orbs", "plain", "dots"] as const, "orbs"),
-    tiles: pick(r.tiles, ["card", "tinted", "flat"] as const, "card"),
-    iconPack: pick(r.iconPack, ["duo", "line", "glyph"] as const, "duo"),
+    canvas: pick(r.canvas, ["orbs", "plain", "dots"] as const, DEFAULT_THEME.canvas),
+    tiles: pick(r.tiles, ["card", "tinted", "flat"] as const, DEFAULT_THEME.tiles),
+    iconPack: pick(r.iconPack, ["area", "duo", "line", "glyph"] as const, DEFAULT_THEME.iconPack),
     iconPalette: pick(r.iconPalette, ["ork", "ocean", "forest", "sunset", "brand"] as const, "ork"),
   };
 }

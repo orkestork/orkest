@@ -24,7 +24,7 @@ export default async function NewOrganization() {
         </div>
         <p className="text-[11px] uppercase tracking-[0.18em] text-stone-500">Paso 1 · Organización</p>
         <h1 className="mt-2 font-display text-5xl uppercase leading-none tracking-tight">Crea tu empresa</h1>
-        <p className="mt-3 max-w-xl text-sm text-stone-600">Hola {s.user.name.split(" ")[0]}. Elige la plantilla más parecida a tu negocio: activa las apps, roles, flujos y almacén iniciales. Después todo se ajusta desde Studio.</p>
+        <p className="mt-3 max-w-xl text-sm text-stone-600">Hola {s.user.name.split(" ")[0]}. Elige la plantilla más parecida a tu negocio: activa las apps, roles, flujos y almacén iniciales. Después todo se ajusta desde Builder.</p>
         <ActionForm action={createOrganization} className="mt-8 space-y-6 rounded-2xl border border-[var(--ork-rule)] bg-white p-6">
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Nombre de la empresa *"><input name="name" required className={input} /></Field>

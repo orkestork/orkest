@@ -4,7 +4,7 @@
 
 generator client {
   provider = "prisma-client"
-  output   = "../lib/generated/prisma"
+  output   = "../../lib/generated/prisma"
 }
 
 datasource db {
@@ -223,6 +223,10 @@ model FileObject {
   entityId       String?
   uploadedById   String?
   createdAt      DateTime @default(now())
+  /// Contenido del archivo cuando storageKey empieza por "db:" (almacenamiento en base de datos, lib/core/files.ts)
+  data           Bytes?
+
+  @@index([organizationId, entityType, entityId])
 }
 
 model Task {
@@ -492,6 +496,8 @@ model Customer {
   email          String?
   phone          String?
   city           String?
+  /// Dirección de entrega (logística)
+  address        String?
   ownerId        String?
   status         String   @default("ACTIVE")
   customFields   Json     @default("{}")
@@ -698,6 +704,47 @@ model Employee {
   position       String?
   departmentId   String?
   customFields   Json    @default("{}")
+
+  // Talento humano (app hr, ver hr.prisma)
+  /// Cédula / documento de identidad
+  documentNumber  String?
+  phone           String?
+  /// INDEFINITE | FIXED_TERM | WORK_OR_LABOR | APPRENTICESHIP | TEMPORARY | CIVIL
+  contractType    String    @default("INDEFINITE")
+  /// ACTIVE | ON_LEAVE | TERMINATED
+  status          String    @default("ACTIVE")
+  managerId       String?
+  site            String?
+  hireDate        DateTime?
+  terminationDate DateTime?
+  salaryAmount    Decimal?  @db.Decimal(14, 2)
+  /// MONTHLY | BIWEEKLY | HOURLY
+  salaryPeriod    String    @default("MONTHLY")
+  eps             String?
+  afp             String?
+  arl             String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @default(now()) @updatedAt
+
+  department    OrgUnit?   @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  manager       Employee?  @relation("EmployeeManager", fields: [managerId], references: [id], onDelete: SetNull)
+  directReports Employee[] @relation("EmployeeManager")
+
+  timeOffRequests     TimeOffRequest[]
+  attendanceRecords   AttendanceRecord[]
+  overtimeRequests    OvertimeRequest[]
+  payslips            Payslip[]
+  certificateRequests CertificateRequest[]
+  benefitRequests     BenefitRequest[]
+  notes               EmployeeNote[]
+  assets              EmployeeAsset[]
+  documents           EmployeeDocument[]
+  tickets             HrTicket[]
+
+  /// Unicidad de userId y documentNumber por organización: validada en lib/apps/hr.ts
+  @@index([organizationId, userId])
+  @@index([organizationId, documentNumber])
+  @@index([organizationId, status])
 }
 
 // ───────────────────────────── KNOWLEDGE / SONAR / GRAPH ─────────────────────────────
@@ -708,6 +755,11 @@ model OrgUnit {
   kind           String // DEPARTMENT | SYSTEM
   name           String
   description    String?
+  /// Código corto del departamento (app hr)
+  code           String?
+  active         Boolean @default(true)
+
+  employees Employee[]
 }
 
 model KnowledgeItem {
@@ -1025,6 +1077,11 @@ model WorkCenter {
   /// Unidades en paralelo
   capacity       Int     @default(1)
   active         Boolean @default(true)
+  /// GENERAL | MACHINE (máquina de inyección) | ASSEMBLY (estación de ensamble)
+  kind           String  @default("GENERAL")
+  brand          String?
+  model          String?
+  location       String?
 }
 
 model Bom {

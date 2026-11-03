@@ -15,16 +15,22 @@ export type LauncherApp = {
   nav: { label: string; href: string }[];
 };
 
-const MODULE_LABEL: Record<string, string> = {
+export const MODULE_LABEL: Record<string, string> = {
   crm: "CRM", sales: "Ventas", products: "Productos", inventory: "Inventario", purchasing: "Compras",
   quality: "Calidad", invoicing: "Facturación", knowledge: "Conocimiento", sonar: "Sonar", radar: "Radar",
   analytics: "Analytics", automations: "Automatizaciones", manufacturing: "Manufactura",
+  campaigns: "Campañas",
+  maintenance: "Mantenimiento", logistics: "Logística",
+  hr: "Talento humano", employee_portal: "Mi portal",
 };
 
 const MODULE_MATCH: Record<string, string[]> = {
   crm: ["/crm"], sales: ["/sales"], products: ["/products"], inventory: ["/inventory"], purchasing: ["/purchasing"],
   quality: ["/quality"], invoicing: ["/invoicing"], knowledge: ["/knowledge"], sonar: ["/sonar"], radar: ["/radar"],
   analytics: ["/analytics"], automations: ["/studio/automations"], manufacturing: ["/manufacturing"],
+  campaigns: ["/campaigns"],
+  maintenance: ["/maintenance"], logistics: ["/logistics"],
+  hr: ["/hr"], employee_portal: ["/empleado"],
 };
 
 export function launcherApps(ctx: OrgContext, customs: { key: string; labelPlural: string; icon: string }[] = []): LauncherApp[] {
@@ -32,7 +38,7 @@ export function launcherApps(ctx: OrgContext, customs: { key: string; labelPlura
     { key: "dashboard", name: "Tableros", icon: "dashboard", href: "/dashboard", match: ["/dashboard"], nav: [] },
   ];
   if (ctx.flags.has("intelligence.ask") && ctx.can("intelligence.ask")) {
-    apps.push({ key: "ask", name: "Ask ORKEST", icon: "ask", href: "/ask", match: ["/ask"], nav: [] });
+    apps.push({ key: "ask", name: "Ask Workezt", icon: "ask", href: "/ask", match: ["/ask"], nav: [] });
   }
   apps.push(
     { key: "approvals", name: "Aprobaciones", icon: "approvals", href: "/approvals", match: ["/approvals"], nav: [] },
@@ -52,7 +58,7 @@ export function launcherApps(ctx: OrgContext, customs: { key: string; labelPlura
 
   if (ctx.can("studio.manage")) {
     apps.push({
-      key: "studio", name: "Studio", icon: "studio", href: "/studio", match: ["/studio"],
+      key: "studio", name: "Builder", icon: "studio", href: "/studio", match: ["/studio"],
       nav: [
         { label: "Objetos", href: "/studio/objects" }, { label: "Campos", href: "/studio/fields" }, { label: "Workflows", href: "/studio/workflows" },
         ...(ctx.hasModule("automations") ? [{ label: "Reglas", href: "/studio/automations" }] : []),

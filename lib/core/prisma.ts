@@ -6,7 +6,14 @@ import { PrismaClient } from "@/lib/generated/prisma/client";
  * Úsalo solo en el Core (auth, memberships, plataforma, outbox).
  * El código de módulos debe usar `ctx.db` (cliente con alcance de tenant).
  */
-const globalForPrisma = globalThis as typeof globalThis & { __orkestPrisma?: PrismaClient };
+const globalForPrisma = globalThis as typeof globalThis & { __orkestPrisma?: PrismaClient; __orkestPrismaClass?: typeof PrismaClient };
+
+// En desarrollo, tras `prisma generate` la clase cambia: se descarta el cliente viejo (no conoce los modelos nuevos)
+// para no tener que reiniciar el servidor.
+if (globalForPrisma.__orkestPrisma && globalForPrisma.__orkestPrismaClass !== PrismaClient) {
+  void globalForPrisma.__orkestPrisma.$disconnect().catch(() => {});
+  globalForPrisma.__orkestPrisma = undefined;
+}
 
 function createClient() {
   // DB_POOL_MAX: conexiones del pool. La base local de desarrollo (prisma dev) admite pocas; en producción subirlo (p. ej. 10).
@@ -16,4 +23,7 @@ function createClient() {
 }
 
 export const prisma = globalForPrisma.__orkestPrisma ?? createClient();
-if (process.env.NODE_ENV !== "production") globalForPrisma.__orkestPrisma = prisma;
+if (process.env.NODE_ENV !== "production") {
+  globalForPrisma.__orkestPrisma = prisma;
+  globalForPrisma.__orkestPrismaClass = PrismaClient;
+}

@@ -17,7 +17,7 @@ async function main() {
   const u = await prisma.user.upsert({ where: { email: "test-f1@x.co" }, update: {}, create: { email: "test-f1@x.co", name: "Tester", passwordHash: "x" } });
   const base: ExecContext = { orgId: o.id, db: tenantDb(o.id), actorId: u.id };
   await ensureBaseRoles(base);
-  const ctx = { ...base, user: { ...u, isPlatformAdmin: false }, role: { id: "x", key: "OWNER", name: "x" }, can: () => true, hasModule: () => true } as unknown as OrgContext;
+  const ctx = { ...base, user: { ...u, isPlatformAdmin: false }, role: { id: "x", key: "OWNER", name: "x" }, can: () => true, restricted: () => false, hasModule: () => true } as unknown as OrgContext;
   await applyTemplate(ctx, "manufacturing");
   const term30 = await ctx.db.paymentTerm.findFirstOrThrow({ where: { name: "30 días" } });
   const pl = await ctx.db.pricelist.create({ data: { organizationId: o.id, name: "Mayoristas", items: { create: [{ discountPct: 10 }] } } });

@@ -1,4 +1,4 @@
-/** Fecha relativa estilo Odoo: Hoy, Mañana, Ayer, Anteayer, Hace 5 días, En 3 días. */
+/** Fecha relativa: Hoy, Mañana, Ayer, Anteayer, Hace 5 días, En 3 días. */
 export function relativeDay(d: Date | null | undefined) {
   if (!d) return { label: "", past: false, today: false };
   const a = new Date(); a.setHours(0, 0, 0, 0);

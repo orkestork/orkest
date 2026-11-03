@@ -24,7 +24,7 @@ export default async function Fields({ searchParams }: PageProps<"/studio/fields
   const defs = await ctx.db.customFieldDefinition.findMany({ orderBy: [{ entityType: "asc" }, { position: "asc" }] });
   return (
     <>
-      <PageHeader title="Custom Fields" crumbs={[{ label: "Studio", href: "/studio" }, { label: "Custom Fields" }]} subtitle="Los campos se guardan por organización y aparecen automáticamente en formularios, detalle, listas, importación y condiciones de reglas (customFields.clave)." />
+      <PageHeader title="Campos personalizados" crumbs={[{ label: "Builder", href: "/studio" }, { label: "Campos" }]} subtitle="Los campos se guardan por organización y aparecen automáticamente en formularios, detalle, listas, importación y condiciones de reglas (customFields.clave)." />
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
           {entities.map((e) => {

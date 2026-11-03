@@ -16,7 +16,7 @@ export async function lookupCustomers(q: string): Promise<LookupItem[]> {
   return rows.map((r) => ({ id: r.id, name: r.name, hint: [r.taxId && `NIT ${r.taxId}`, r.city, r.phone].filter(Boolean).join(" · ") || undefined }));
 }
 
-/** "Crear «nombre»" desde el selector, como en Odoo. */
+/** "Crear «nombre»" directamente desde el selector. */
 export async function quickCreateCustomer(name: string): Promise<LookupItem> {
   const ctx = await actionContext("crm.customers.write", "crm");
   const c = await createCustomer(ctx, { name });

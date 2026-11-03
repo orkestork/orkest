@@ -44,7 +44,7 @@ export default async function Radar({ searchParams }: PageProps<"/radar">) {
 
   return (
     <>
-      <PageHeader title="ORKEST Radar" subtitle={`${active.length} detectores activos: ${active.map((d) => d.label).join(" · ")}`}
+      <PageHeader title="Workezt Radar" subtitle={`${active.length} detectores activos: ${active.map((d) => d.label).join(" · ")}`}
         actions={<form action={scan}><button className={btn.primary}>Escanear ahora</button></form>} />
       <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat label="Críticas" value={c("CRITICAL")} /><Stat label="Altas" value={c("HIGH")} /><Stat label="Medias" value={c("MEDIUM")} /><Stat label="Bajas" value={c("LOW")} />

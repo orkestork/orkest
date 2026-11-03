@@ -13,6 +13,7 @@ import { attemptDelivery, newWebhookSecret } from "@/lib/core/webhooks";
 import { getModule, missingDependencies } from "@/lib/modules/registry";
 import { enableModules } from "@/lib/templates/apply";
 import { safeAction } from "@/lib/ui/action";
+import { MODULE_LABEL } from "@/lib/launcher";
 import type { ActionResult } from "@/components/action-form";
 
 const s = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
@@ -118,21 +119,23 @@ export async function deleteRole(form: FormData) {
   revalidatePath("/settings/roles");
 }
 
-export async function toggleModule(form: FormData) {
-  const ctx = await actionContext("org.modules.manage");
-  const key = s(form, "key");
-  const mod = getModule(key);
-  if (!mod || mod.status !== "available") throw new Error("Módulo no disponible");
-  const wasOn = ctx.modules.has(key);
-  if (wasOn) {
-    const dependents = [...ctx.modules].filter((k) => getModule(k)?.dependsOn?.includes(key));
-    if (dependents.length) throw new Error(`Primero desactiva: ${dependents.join(", ")}`);
-    await ctx.db.organizationModule.updateMany({ where: { moduleKey: key }, data: { enabled: false } });
-  } else {
-    await enableModules(ctx, [key, ...missingDependencies(key, ctx.modules)]);
-  }
-  await audit(ctx, wasOn ? "ModuleDisabled" : "ModuleEnabled", "module", key);
-  revalidatePath("/", "layout");
+export async function toggleModule(_: ActionResult, form: FormData): Promise<ActionResult> {
+  return safeAction(async () => {
+    const ctx = await actionContext("org.modules.manage");
+    const key = s(form, "key");
+    const mod = getModule(key);
+    if (!mod || mod.status !== "available") return { error: "Esta aplicación no está disponible." };
+    const wasOn = ctx.modules.has(key);
+    if (wasOn) {
+      const dependents = [...ctx.modules].filter((k) => getModule(k)?.dependsOn?.includes(key)).map((k) => MODULE_LABEL[k] ?? getModule(k)?.name ?? k);
+      if (dependents.length) return { error: `${MODULE_LABEL[key] ?? mod.name} no se puede desactivar porque la usan: ${dependents.join(", ")}. Desactiva esas apps primero.` };
+      await ctx.db.organizationModule.updateMany({ where: { moduleKey: key }, data: { enabled: false } });
+    } else {
+      await enableModules(ctx, [key, ...missingDependencies(key, ctx.modules)]);
+    }
+    await audit(ctx, wasOn ? "ModuleDisabled" : "ModuleEnabled", "module", key);
+    revalidatePath("/", "layout");
+  });
 }
 
 export async function createWebhook(_: ActionResult, form: FormData): Promise<ActionResult> {

@@ -16,7 +16,7 @@ export default async function Automations() {
   const runs = await ctx.db.automationRun.findMany({ where: { matched: true }, include: { automation: true }, orderBy: { createdAt: "desc" }, take: 10 });
   return (
     <>
-      <PageHeader title="Business Rules & Automations" crumbs={[{ label: "Studio", href: "/studio" }, { label: "Automatizaciones" }]}
+      <PageHeader title="Reglas y automatizaciones" crumbs={[{ label: "Builder", href: "/studio" }, { label: "Automatizaciones" }]}
         subtitle="WHEN evento · IF condiciones · THEN acciones. Se ejecutan solo sobre los datos de esta organización."
         actions={<Link href="/studio/automations/new" className={btn.primary}>Nueva regla</Link>} />
       <div className="grid gap-6 lg:grid-cols-3">

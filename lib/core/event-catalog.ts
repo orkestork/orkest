@@ -50,6 +50,12 @@ export const EVENTS: EventDef[] = [
   { type: "CustomRecordCreated", label: "Registro personalizado creado", entityType: "custom", module: null, webhook: "custom_record.created" },
   { type: "KnowledgePublished", label: "Conocimiento publicado", entityType: "knowledge", module: "knowledge", webhook: "knowledge.published" },
   { type: "SonarItemCreated", label: "Hallazgo Sonar registrado", entityType: "sonar_item", module: "sonar", webhook: "sonar.item_created" },
+  { type: "EmployeeHired", label: "Colaborador vinculado", entityType: "employee", module: "hr", webhook: "employee.hired" },
+  { type: "TimeOffRequested", label: "Ausencia solicitada", entityType: "time_off", module: "hr", webhook: "time_off.requested" },
+  { type: "TimeOffDecided", label: "Ausencia aprobada o rechazada", entityType: "time_off", module: "hr", webhook: "time_off.decided" },
+  { type: "HrTicketCreated", label: "Solicitud interna creada", entityType: "hr_ticket", module: "hr", webhook: "hr_ticket.created" },
+  { type: "CampaignCreated", label: "Campaña creada", entityType: "campaign", module: "campaigns", webhook: "campaign.created" },
+  { type: "SellerDayClosed", label: "Vendedor cerró su reporte del día", entityType: "campaign", module: "campaigns", webhook: "seller.day_closed" },
 ];
 
 export const EVENT_MAP = new Map(EVENTS.map((e) => [e.type, e]));

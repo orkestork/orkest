@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { requirePermission } from "@/lib/core/context";
 import { AskChat } from "./chat";
 
-export const metadata = { title: "Ask ORKEST" };
+export const metadata = { title: "Ask Workezt" };
 
 export default async function Ask() {
   const ctx = await requirePermission("intelligence.ask");

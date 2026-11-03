@@ -20,6 +20,16 @@ export const TENANT_MODELS = new Set([
   "Requisition", "PurchaseOrder", "WorkCenter", "Bom", "ProductionOrder",
   "PaymentTerm", "Pricelist", "SalesOrder", "Bill", "Journal", "Tax", "Payment",
   "CustomEntity", "CustomRecord", "Sequence",
+  // Talento humano
+  "TimeOffRequest", "AttendanceRecord", "OvertimeRequest", "Payslip", "CertificateRequest", "Benefit", "BenefitRequest",
+  "HrAnnouncement", "HrAnnouncementRead", "Candidate", "EmployeeNote", "EmployeeAsset", "EmployeeDocument",
+  "HrRequestCategory", "HrTicket", "HrTicketComment", "HrTicketEvent",
+  // Operaciones: planta, mantenimiento y logística
+  "ProductionRun", "AssemblyRun", "StandardOperation", "ProductionTimeEntry", "Mold", "MoldChange",
+  "Equipment", "MaintenanceOrder", "MaintenanceQuote", "Driver", "Vehicle", "VehicleChecklistEntry",
+  "DeliveryRoute", "TransportCost", "TransportIncident", "OperationsReport",
+  // Campañas y calendario comercial
+  "Campaign", "CampaignDaily", "SellerDailyClose", "SellerReportEvent", "CalendarConfig", "SellerCalendarSetting", "CalendarHoliday",
 ]);
 
 const WHERE_OPS = new Set([

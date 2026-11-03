@@ -3,6 +3,7 @@ import { requireModule } from "@/lib/core/context";
 import { stateLabel } from "@/components/workflow-bar";
 import { Badge, btn, Card, PageHeader, Table, td } from "@/components/ui";
 import { date, num } from "@/lib/ui/format";
+import { nowMs } from "@/lib/ui/clock";
 
 export const metadata = { title: "Órdenes de producción" };
 
@@ -16,7 +17,7 @@ export default async function ProductionOrders() {
       <PageHeader title="Órdenes de producción" actions={ctx.can("manufacturing.write") && <Link href="/manufacturing/orders/new" className={btn.primary}>Nueva orden</Link>} />
       <Card padded={false}>
         <Table head={["Número", "Producto", "Cantidad", "Producido", "Planta", "Programada", "Origen", "Estado"]} empty={orders.length === 0}>
-          {orders.map((o) => { const s = label(o.status); const late = ["confirmed", "in_progress"].includes(o.status) && o.scheduledAt.getTime() < Date.now() - 86400000; return (
+          {orders.map((o) => { const s = label(o.status); const late = ["confirmed", "in_progress"].includes(o.status) && o.scheduledAt.getTime() < nowMs() - 86400000; return (
             <tr key={o.id} className="hover:bg-slate-50">
               <td className={td}><Link href={`/manufacturing/orders/${o.id}`} className="font-medium hover:underline">{o.number}</Link></td>
               <td className={td}>{products.get(o.productId)?.name}</td>

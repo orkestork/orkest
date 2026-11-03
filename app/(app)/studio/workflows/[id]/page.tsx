@@ -23,7 +23,7 @@ export default async function WorkflowEditor({ params }: PageProps<"/studio/work
 
   return (
     <>
-      <PageHeader title={wf.name} crumbs={[{ label: "Studio", href: "/studio" }, { label: "Workflows", href: "/studio/workflows" }, { label: wf.name }]} subtitle={`Entidad: ${wf.entityType.startsWith("x:") ? "objeto personalizado" : entity.labelPlural}`} />
+      <PageHeader title={wf.name} crumbs={[{ label: "Builder", href: "/studio" }, { label: "Workflows", href: "/studio/workflows" }, { label: wf.name }]} subtitle={`Entidad: ${wf.entityType.startsWith("x:") ? "objeto personalizado" : entity.labelPlural}`} />
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
           <Card title="Estados">

@@ -1,38 +1,51 @@
 @import "tailwindcss";
 
-/* Identidad OR-K (or-k.co): papel editorial, tinta, púrpura/violeta y magenta */
+/* Identidad Workezt by OR-K (propuesta A, 26 oct 2026): fondo claro, tinta azul noche y acentos violeta.
+   Los nombres --ork-* se conservan porque toda la app y los temas por organización los usan. */
 :root {
-  --ork-paper: #eee7dc;
-  --ork-paper-light: #f7f1e7;
-  --ork-ink: #11100f;
-  --ork-pink: #e31572;
-  --ork-purple: #32125e;
-  --ork-violet: #6f35b5;
-  --ork-lavender: #bda5ff;
+  --ork-paper: #eceef5;
+  --ork-paper-light: #f6f7fb;
+  --ork-ink: #15122e;
+  --ork-pink: #e5484d;
+  --ork-purple: #5b21b6;
+  --ork-violet: #7c3aed;
+  --ork-lavender: #c4b5fd;
   --ork-acid: #b6ff5c;
-  --ork-rule: rgba(17, 16, 15, 0.14);
-  /* Acento de acciones: marca OR-K. El color de cada organización vive en --org. */
+  --ork-rule: rgba(21, 18, 46, 0.1);
+  --wz-night: #120b33;
+  /* Acento de acciones: marca. El color de cada organización vive en --org. */
   --brand: var(--ork-purple);
 }
 
 @theme inline {
   --font-sans: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-anton), Impact, sans-serif;
+  --font-display: var(--font-poppins), var(--font-dm-sans), ui-sans-serif, sans-serif;
   --font-serif: var(--font-instrument), Georgia, serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 
-  /* Grises cálidos para armonizar con el papel */
-  --color-slate-50: #faf8f5;
-  --color-slate-100: #f2eee8;
-  --color-slate-200: #e4ded5;
-  --color-slate-300: #d0c8bc;
-  --color-slate-400: #a39a8e;
-  --color-slate-500: #7a7166;
-  --color-slate-600: #5c544b;
-  --color-slate-700: #453f38;
-  --color-slate-800: #2b2723;
-  --color-slate-900: #17151a;
-  --color-slate-950: #0e0c10;
+  /* Grises fríos (Workezt): fondo limpio y texto azul noche */
+  --color-slate-50: #f7f8fb;
+  --color-slate-100: #eef0f5;
+  --color-slate-200: #e0e3ec;
+  --color-slate-300: #c9cedb;
+  --color-slate-400: #979eb2;
+  --color-slate-500: #6b7289;
+  --color-slate-600: #50566d;
+  --color-slate-700: #3b4057;
+  --color-slate-800: #252a3f;
+  --color-slate-900: #15122e;
+  --color-slate-950: #0c0a1f;
+  --color-stone-50: #f7f8fb;
+  --color-stone-100: #eef0f5;
+  --color-stone-200: #e0e3ec;
+  --color-stone-300: #c9cedb;
+  --color-stone-400: #979eb2;
+  --color-stone-500: #6b7289;
+  --color-stone-600: #50566d;
+  --color-stone-700: #3b4057;
+  --color-stone-800: #252a3f;
+  --color-stone-900: #15122e;
+  --color-stone-950: #0c0a1f;
 }
 
 body {
@@ -113,3 +126,32 @@ a:hover > .app-tile svg { transform: scale(1.06) rotate(-3deg); }
 [data-tiles="tinted"] .app-tile { background: color-mix(in srgb, var(--ork-lavender) 30%, #fff); }
 [data-tiles="flat"] .app-tile { background: transparent; box-shadow: none; }
 [data-tiles="flat"] a:hover > .app-tile { background: color-mix(in srgb, var(--ork-lavender) 25%, transparent); box-shadow: none; }
+
+/* ───────── Workezt ───────── */
+/* Títulos: Poppins en tipo oración (los antiguos titulares en mayúsculas de Anton pasan a minúscula/oración) */
+.font-display { letter-spacing: -0.02em; }
+.font-display.uppercase { text-transform: none; }
+.font-display[class*="tracking-"] { letter-spacing: -0.02em; }
+
+/* Lienzo liso por defecto con un brillo violeta muy suave arriba */
+.ork-canvas[data-canvas="plain"] {
+  background:
+    radial-gradient(70rem 22rem at 50% -8rem, color-mix(in srgb, var(--ork-violet) 7%, transparent), transparent 70%),
+    var(--ork-paper-light);
+}
+
+/* Paquete "area": recuadro 3D con color por familia (por defecto) */
+.app-icon .ic-area { display: none; }
+[data-icons="area"] .app-icon:not([data-pack]) .ic-area,
+.app-icon[data-pack="area"] .ic-area { display: inline; }
+[data-icons="area"] .app-icon:not([data-pack]) .ic-shapes,
+.app-icon[data-pack="area"] .ic-shapes { display: none; }
+.app-icon .ic-glyph { filter: drop-shadow(0 1.2px 1.2px rgba(10, 8, 40, 0.28)); }
+[data-icons="area"] .app-tile .app-icon,
+.app-tile .app-icon[data-pack="area"] { filter: drop-shadow(0 6px 10px rgba(21, 18, 46, 0.18)) drop-shadow(0 2px 3px rgba(21, 18, 46, 0.12)); }
+[data-icons="area"] a:hover > .app-tile .app-icon { filter: drop-shadow(0 10px 16px rgba(21, 18, 46, 0.24)) drop-shadow(0 3px 4px rgba(21, 18, 46, 0.14)); }
+[data-icons="area"] a:hover > .app-tile svg { transform: translateY(-3px) scale(1.04); }
+
+/* Banner de bienvenida con la orca */
+.wz-hero { background: var(--wz-night); }
+[data-icons="area"][data-tiles="flat"] a:hover > .app-tile { background: transparent; }

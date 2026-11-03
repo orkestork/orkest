@@ -19,7 +19,7 @@ export function CustomLines({ defs, relations }: { defs: Def[]; relations: Recor
     const type = ["number", "currency"].includes(d.type) ? "number" : d.type === "date" ? "date" : "text";
     return <input className={cell} type={type} step="any" value={String(v ?? "")} onChange={(e) => set(i, d.key, e.target.value)} />;
   };
-  if (!defs.length) return <p className="text-sm text-slate-400">Define los campos de línea en Studio → Campos.</p>;
+  if (!defs.length) return <p className="text-sm text-slate-400">Define los campos de línea en Builder → Campos.</p>;
   return (
     <div className="space-y-2">
       <input type="hidden" name="lines" value={JSON.stringify(rows.filter((r) => Object.values(r).some((v) => v !== "" && v !== undefined && v !== false)))} />

@@ -1,4 +1,4 @@
-/** Píldora de estado sólida (estilo Odoo) con contraste AA en ambos sentidos. */
+/** Píldora de estado sólida con contraste AA en ambos sentidos. */
 const SOLID: Record<string, string> = {
   slate: "bg-stone-500 text-white", blue: "bg-blue-600 text-white", indigo: "bg-indigo-600 text-white",
   violet: "bg-[var(--ork-violet)] text-white", emerald: "bg-emerald-600 text-white", amber: "bg-amber-400 text-stone-900",

@@ -18,7 +18,7 @@ async function main() {
   await ensureBaseRoles(base);
   const role = await base.db.role.findFirstOrThrow({ where: { key: "OWNER" } });
   await base.db.membership.create({ data: { organizationId: o.id, userId: u.id, roleId: role.id } });
-  const ctx = { ...base, user: { ...u, isPlatformAdmin: false }, role: { id: role.id, key: "OWNER", name: "x" }, can: () => true, hasModule: () => true } as unknown as OrgContext;
+  const ctx = { ...base, user: { ...u, isPlatformAdmin: false }, role: { id: role.id, key: "OWNER", name: "x" }, can: () => true, restricted: () => false, hasModule: () => true } as unknown as OrgContext;
   const mp = await createWarehouse(ctx, { code: "MP", name: "Materia prima" });
   await applyTemplate(ctx, "manufacturing");
   const pt = await createWarehouse(ctx, { code: "PT", name: "Producto terminado" });

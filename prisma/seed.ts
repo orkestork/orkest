@@ -20,6 +20,7 @@ import { createSalesOrder, priceFor } from "@/lib/apps/sales-orders";
 import { billFromPurchaseOrder, invoiceFromSalesOrder, registerPayment } from "@/lib/apps/invoicing";
 import { createCustomEntity, createRecord } from "@/lib/apps/custom-objects";
 import { seedHistory } from "./history";
+import { seedOperations } from "./seed-operations";
 import { createNonconformity } from "@/lib/apps/quality";
 import { createKnowledge, link, publishKnowledge } from "@/lib/apps/knowledge";
 import { addSonarItem } from "@/lib/apps/sonar";
@@ -87,6 +88,7 @@ async function main() {
   const MP = await createWarehouse(P, { code: "MP", name: "Materia prima" });
   const PLT = await createWarehouse(P, { code: "PLT", name: "Planta de fabricación" });
   await applyTemplate(P, "manufacturing");
+  await P.db.organizationModule.create({ data: { organizationId: P.orgId, moduleKey: "campaigns" } });
 
   const owner = await user("admin@presservac.co", "Laura Méndez");
   const gerente = await user("gerencia@presservac.co", "Andrés Rojas");
@@ -316,6 +318,9 @@ async function main() {
   await validateTransfer(I, del3.id);
   const inv3 = await invoiceFromSalesOrder(F, so3.id);
   await registerPayment(F, { invoiceId: inv3.id, amount: Math.round(Number(inv3.total) * 0.3), reference: "Anticipo 30%" });
+
+  // Operaciones: planta (prensa, troquel, ensamble), mantenimiento y logística con la ruta del pedido pendiente
+  await seedOperations(M, { productionId: op1.id, productionNumber: op1.number, productId: pid("PV-ACP-100"), operatorId: produccion.id, logisticsId: inventario.id, salesOrderIds: [so2.id], customerId: customers[0].id });
 
   // Cartera adicional (vencida hace 8 días)
   await P.db.invoice.create({ data: {

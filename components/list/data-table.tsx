@@ -4,7 +4,7 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 
 /**
- * Tabla de lista estilo Odoo: selección múltiple, columnas ordenables y opcionales
+ * Tabla de lista: selección múltiple, columnas ordenables y opcionales
  * (preferencia guardada en el navegador), grupos plegables con subtotales,
  * totales al pie y clic en fila para abrir el registro. Exporta la selección a CSV.
  */
@@ -32,6 +32,7 @@ export function DataTable({ storageKey, columns, rows, groups, moneyColumns = []
   useEffect(() => {
     try {
       const saved = localStorage.getItem(`cols:${storageKey}`);
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- las columnas guardadas solo existen en el navegador; se leen tras montar para no romper la hidratación
       if (saved) setVisible(new Set(JSON.parse(saved) as string[]));
     } catch { /* sin almacenamiento disponible */ }
   }, [storageKey]);
@@ -85,24 +86,24 @@ export function DataTable({ storageKey, columns, rows, groups, moneyColumns = []
           <button onClick={() => setSelected(new Set())} className="text-xs text-stone-600 hover:underline">Quitar selección</button>
         </div>
       )}
-      {/* Scroll propio con el alto de la pantalla (como Odoo): la barra horizontal queda siempre visible abajo */}
+      {/* Scroll propio con el alto de la pantalla: la barra horizontal queda siempre visible abajo */}
       <div className="max-h-[calc(100dvh-10.5rem)] overflow-auto overscroll-contain">
         <table className="w-full table-fixed text-sm" style={{ minWidth: minWidth(cols) }}>
           <colgroup><col className="w-10" />{cols.map((c) => <col key={c.key} style={c.width ? { width: c.width } : undefined} />)}<col className="w-9" /></colgroup>
           <thead className="sticky top-0 z-10 bg-white shadow-[0_1px_0_var(--color-stone-200)]">
-            <tr className="border-b border-stone-200 text-left text-[13px] font-semibold text-stone-800">
+            <tr className="border-b border-stone-200 text-left text-[11px] font-semibold uppercase tracking-wide text-stone-500">
               <th className="px-3 py-2.5"><input type="checkbox" checked={allSelected} onChange={() => setSelected(allSelected ? new Set() : new Set(all.map((r) => r.id)))} aria-label="Seleccionar todo" className="h-4 w-4 accent-[var(--ork-violet)]" /></th>
               {cols.map((c) => (
                 <th key={c.key} className={`truncate px-3 py-2.5 ${c.align === "right" ? "text-right" : c.align === "center" ? "text-center" : ""}`}>
                   {c.sortable ? (
-                    <button onClick={() => sortBy(c.key)} className="inline-flex max-w-full items-center gap-1 hover:text-[var(--ork-violet)]">
+                    <button onClick={() => sortBy(c.key)} className="inline-flex max-w-full items-center gap-1 uppercase tracking-wide hover:text-[var(--ork-violet)]">
                       <span className="truncate">{c.label}</span>{sort === c.key && <span aria-hidden="true">{dir === "asc" ? "▲" : "▼"}</span>}
                     </button>
                   ) : c.label}
                 </th>
               ))}
               <th className="sticky right-0 z-10 bg-white px-1 shadow-[-1px_0_0_var(--color-stone-200)]">
-                <button onClick={() => setChooser(!chooser)} aria-label="Elegir columnas" className="grid h-7 w-7 place-items-center rounded hover:bg-stone-100">⚙</button>
+                <button onClick={() => setChooser(!chooser)} aria-label="Elegir columnas" title="Columnas" className="grid h-7 w-7 place-items-center rounded-full text-stone-400 hover:bg-[var(--ork-violet)]/10 hover:text-[var(--ork-purple)]"><svg viewBox="0 0 20 20" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><rect x="3" y="4" width="4" height="12" rx="1" /><rect x="9" y="4" width="4" height="12" rx="1" /><path d="M16 7v6M13 10h6" /></svg></button>
                 {chooser && (
                   <div className="absolute right-1 z-20 mt-1 max-h-80 w-56 overflow-y-auto rounded-xl border border-stone-200 bg-white p-2 text-sm font-normal shadow-xl">
                     {columns.filter((c) => c.optional).map((c) => (
@@ -121,14 +122,14 @@ export function DataTable({ storageKey, columns, rows, groups, moneyColumns = []
               const closed = collapsed.has(g.key);
               return [
                 <tr key={`g-${g.key}`} onClick={() => setCollapsed((c) => { const n = new Set(c); if (n.has(g.key)) n.delete(g.key); else n.add(g.key); return n; })}
-                  className="cursor-pointer border-b border-stone-200 bg-stone-50 font-semibold hover:bg-stone-100">
-                  <td className="px-3 py-2 text-stone-500">{closed ? "▸" : "▾"}</td>
+                  className="cursor-pointer border-b border-stone-200 bg-[var(--ork-violet)]/[0.04] font-semibold hover:bg-[var(--ork-violet)]/[0.08]">
+                  <td className="px-3 py-2 text-[var(--ork-violet)]"><span aria-hidden="true" className={`inline-block transition ${closed ? "-rotate-90" : ""}`}>⌄</span></td>
                   {(() => {
                     // La etiqueta del grupo ocupa todas las columnas antes del primer subtotal
                     const firstSum = Math.max(1, cols.findIndex((c) => c.sum));
                     const span = firstSum === -1 ? cols.length : firstSum;
                     return [
-                      <td key="label" colSpan={span} className="truncate px-3 py-2">{g.label} <span className="font-normal text-stone-500">({g.rows.length})</span></td>,
+                      <td key="label" colSpan={span} className="truncate px-3 py-2">{g.label} <span className="ml-1 rounded-full bg-white px-2 py-0.5 text-[11px] font-medium text-stone-500 shadow-sm">{g.rows.length}</span></td>,
                       ...cols.slice(span).map((c) => <td key={c.key} className={`truncate px-3 py-2 ${c.align === "right" ? "text-right tabular-nums" : ""}`}>{c.sum ? fmtSum(s[c.key], moneyColumns.includes(c.key)) : ""}</td>),
                     ];
                   })()}

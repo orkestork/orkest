@@ -14,7 +14,7 @@ const fmt = (v: number) => v.toLocaleString("es-CO", { style: "currency", curren
 const cell = "w-full rounded-md border border-transparent bg-transparent px-1.5 py-1 text-sm outline-none hover:border-stone-200 focus:border-[var(--ork-violet)] focus:bg-white";
 const field = "w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm outline-none focus:border-[var(--ork-violet)]";
 
-/** Ficha editable de cotización (estilo Odoo): encabezado, líneas con secciones/notas, términos y totales. */
+/** Editor de cotización: encabezado, líneas con secciones y notas, condiciones comerciales y totales. */
 export function QuoteEditor({ action, initial, products, customer, terms, pricelists, readOnlyHeader, canCreateCustomer, extra, showMargin = true }: {
   action: (p: ActionResult, f: FormData) => Promise<ActionResult>; initial: EditorInitial;
   products: Product[]; customer: Opt | null; terms: Opt[]; pricelists: Opt[]; readOnlyHeader?: boolean; canCreateCustomer?: boolean;
@@ -93,10 +93,10 @@ export function QuoteEditor({ action, initial, products, customer, terms, pricel
             ))}
             <tr className="border-t border-stone-100">
               <td />
-              <td colSpan={7} className="space-x-5 px-2 py-2.5 text-sm font-medium text-[var(--ork-violet)]">
-                <button type="button" onClick={() => add("PRODUCT")} className="hover:underline">Agregar un producto</button>
-                <button type="button" onClick={() => add("SECTION")} className="hover:underline">Agregar una sección</button>
-                <button type="button" onClick={() => add("NOTE")} className="hover:underline">Agregar una nota</button>
+              <td colSpan={7} className="space-x-2 px-2 py-2.5 text-sm font-medium text-[var(--ork-purple)]">
+                <button type="button" onClick={() => add("PRODUCT")} className="rounded-full bg-[var(--ork-violet)]/[0.08] px-3 py-1 hover:bg-[var(--ork-violet)]/15">+ Producto</button>
+                <button type="button" onClick={() => add("SECTION")} className="rounded-full bg-[var(--ork-violet)]/[0.08] px-3 py-1 hover:bg-[var(--ork-violet)]/15">+ Sección</button>
+                <button type="button" onClick={() => add("NOTE")} className="rounded-full bg-[var(--ork-violet)]/[0.08] px-3 py-1 hover:bg-[var(--ork-violet)]/15">+ Nota</button>
               </td>
             </tr>
           </tbody>
@@ -104,7 +104,7 @@ export function QuoteEditor({ action, initial, products, customer, terms, pricel
       </div>
 
       <div className="grid gap-6 md:grid-cols-[1fr_320px]">
-        <textarea value={head.terms} onChange={(e) => { setHead({ ...head, terms: e.target.value }); touch(); }} rows={4} placeholder="Términos y condiciones…" className={`${field} resize-y`} aria-label="Términos y condiciones" />
+        <textarea value={head.terms} onChange={(e) => { setHead({ ...head, terms: e.target.value }); touch(); }} rows={4} placeholder="Condiciones comerciales (se imprimen en el documento)…" className={`${field} resize-y`} aria-label="Condiciones comerciales" />
         <dl className="space-y-1.5 text-sm">
           <div className="flex justify-between"><dt className="text-stone-600">Subtotal</dt><dd className="tabular-nums">{fmt(subtotal)}</dd></div>
           <div className="flex justify-between"><dt className="text-stone-600">Impuestos</dt><dd className="tabular-nums">{fmt(tax)}</dd></div>

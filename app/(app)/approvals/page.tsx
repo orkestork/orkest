@@ -47,7 +47,7 @@ export default async function Approvals() {
                   {d?.party && <span className="text-sm text-slate-600">{d.party}</span>}
                 </div>
                 <p className="mt-1 text-sm text-slate-700">{a.reason}</p>
-                <p className="mt-1 text-xs text-slate-500">Debe aprobar: <Badge tone="amber">{roleName(a.requiredRoleKey)}</Badge> · solicitado por <b>{a.requestedById ? userMap.get(a.requestedById) ?? "—" : "ORKEST"}</b> · {ago(a.createdAt)}</p>
+                <p className="mt-1 text-xs text-slate-500">Debe aprobar: <Badge tone="amber">{roleName(a.requiredRoleKey)}</Badge> · solicitado por <b>{a.requestedById ? userMap.get(a.requestedById) ?? "—" : "Workezt"}</b> · {ago(a.createdAt)}</p>
                 {d && d.lines.length > 0 && (
                   <ul className="mt-3 divide-y divide-slate-100 rounded-lg border border-slate-200 text-sm">
                     {d.lines.slice(0, 5).map((l, i) => (

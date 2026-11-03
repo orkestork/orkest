@@ -25,7 +25,7 @@ export default async function Replenishment() {
 
   return (
     <>
-      <PageHeader title="Reabastecimiento" subtitle="Reglas mín/máx por bodega. Si el pronóstico (existencia + entradas − salidas) cae bajo el mínimo, ORKEST repone hasta el máximo comprando, fabricando o trayendo de otra bodega. Las reglas automáticas se ejecutan después de cada movimiento." />
+      <PageHeader title="Reabastecimiento" subtitle="Reglas mín/máx por bodega. Si el pronóstico (existencia + entradas − salidas) cae bajo el mínimo, Workezt repone hasta el máximo comprando, fabricando o trayendo de otra bodega. Las reglas automáticas se ejecutan después de cada movimiento." />
       <div className="grid gap-6 xl:grid-cols-3">
         <Card padded={false} className="xl:col-span-2">
           <ActionForm action={runRules}>

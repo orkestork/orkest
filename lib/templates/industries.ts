@@ -43,36 +43,40 @@ export const BASE_ROLES: RoleTemplate[] = [
   {
     key: "ADMIN", name: "Administrador", description: "Administra usuarios, apps y configuración",
     permissions: ["org.*", "studio.*", "integrations.*", "audit.*", "import.*", "intelligence.*", "automations.*", "custom.*", "approvals.override",
-      "crm.*", "sales.*", "products.*", "inventory.*", "purchasing.*", "quality.*", "invoicing.*", "knowledge.*", "sonar.*", "radar.*", "analytics.*", "hr.*", "manufacturing.*", "accounting.*", "documents.*", "website.*"],
+      "crm.*", "sales.*", "products.*", "inventory.*", "purchasing.*", "quality.*", "invoicing.*", "knowledge.*", "sonar.*", "radar.*", "analytics.*", "hr.*", "manufacturing.*", "accounting.*", "documents.*", "website.*", "campaigns.*", "maintenance.*", "logistics.*"],
   },
   {
     key: "MANAGEMENT", name: "Gerencia", description: "Visibilidad total y aprobaciones de alto valor",
     permissions: ["crm.*", "sales.*", "products.read", "inventory.read", "purchasing.read", "purchasing.approve", "purchasing.requisitions.read",
-      "manufacturing.read", "quality.read", "invoicing.read", "knowledge.*", "sonar.*", "radar.*", "analytics.read", "intelligence.ask", "audit.read", "custom.*"],
+      "manufacturing.read", "maintenance.read", "logistics.read", "quality.read", "invoicing.read", "knowledge.*", "sonar.*", "radar.*", "analytics.read", "intelligence.ask", "audit.read", "custom.*", "campaigns.read", "hr.employees.read", "hr.approve", "hr.portal"],
   },
   {
     key: "SALES", name: "Comercial", description: "Clientes, oportunidades y cotizaciones",
-    permissions: ["crm.*", "sales.quotes.read", "sales.quotes.write", "products.read", "inventory.read", "purchasing.requisitions.*", "knowledge.read", "radar.read", "intelligence.ask"],
+    permissions: ["crm.*", "sales.quotes.read", "sales.quotes.write", "products.read", "inventory.read", "purchasing.requisitions.*", "knowledge.read", "radar.read", "intelligence.ask", "campaigns.read", "campaigns.write", "scope:own:campaigns", "hr.portal"],
   },
   {
     key: "INVENTORY", name: "Inventario y compras", description: "Productos, existencias y proveedores",
-    permissions: ["products.*", "inventory.*", "purchasing.read", "purchasing.write", "purchasing.requisitions.*", "manufacturing.read", "quality.read", "knowledge.read", "radar.read", "intelligence.ask"],
+    permissions: ["products.*", "inventory.*", "logistics.*", "purchasing.read", "purchasing.write", "purchasing.requisitions.*", "manufacturing.read", "quality.read", "knowledge.read", "radar.read", "intelligence.ask", "hr.portal"],
   },
   {
     key: "FINANCE", name: "Finanzas", description: "Facturación y cartera",
-    permissions: ["invoicing.*", "accounting.*", "crm.customers.read", "sales.quotes.read", "purchasing.read", "radar.read", "analytics.read", "intelligence.ask"],
+    permissions: ["invoicing.*", "accounting.*", "crm.customers.read", "sales.quotes.read", "purchasing.read", "radar.read", "analytics.read", "intelligence.ask", "hr.portal"],
   },
   {
     key: "QUALITY", name: "Calidad", description: "No conformidades y conocimiento",
-    permissions: ["quality.*", "purchasing.read", "purchasing.requisitions.*", "products.read", "manufacturing.read", "knowledge.*", "sonar.*", "radar.read", "intelligence.ask"],
+    permissions: ["quality.*", "purchasing.read", "purchasing.requisitions.*", "products.read", "manufacturing.read", "knowledge.*", "sonar.*", "radar.read", "intelligence.ask", "hr.portal"],
   },
   {
     key: "PRODUCTION", name: "Producción", description: "Órdenes de producción, BoM y consumo de materiales",
-    permissions: ["manufacturing.*", "inventory.*", "products.read", "quality.*", "purchasing.requisitions.*", "knowledge.read", "radar.read", "intelligence.ask"],
+    permissions: ["manufacturing.*", "maintenance.*", "inventory.*", "products.read", "quality.*", "purchasing.requisitions.*", "knowledge.read", "radar.read", "intelligence.ask", "hr.portal"],
   },
   {
     key: "VIEWER", name: "Consulta", description: "Solo lectura",
-    permissions: ["crm.customers.read", "crm.opportunities.read", "sales.quotes.read", "products.read", "inventory.read", "knowledge.read", "radar.read"],
+    permissions: ["crm.customers.read", "crm.opportunities.read", "sales.quotes.read", "products.read", "inventory.read", "knowledge.read", "radar.read", "hr.portal"],
+  },
+  {
+    key: "EMPLOYEE", name: "Colaborador", description: "Portal del colaborador: sus solicitudes, nómina, documentos y noticias",
+    permissions: ["hr.portal"],
   },
 ];
 
@@ -266,7 +270,7 @@ export const INDUSTRY_TEMPLATES: IndustryTemplate[] = [
   {
     key: "manufacturing", name: "Manufactura", status: "available",
     description: "Fabricantes con ventas B2B, inventario de materias primas, calidad y proveedores.",
-    modules: ["crm", "sales", "products", "inventory", "purchasing", "manufacturing", "quality", "invoicing", "knowledge", "sonar", "radar", "analytics", "automations"],
+    modules: ["crm", "sales", "products", "inventory", "purchasing", "manufacturing", "maintenance", "logistics", "quality", "invoicing", "knowledge", "sonar", "radar", "analytics", "automations"],
     fields: [
       { entityType: "product", key: "material", label: "Material", type: "text" },
       { entityType: "product", key: "lead_time_days", label: "Lead time (días)", type: "number", validation: { min: 0, max: 365 } },

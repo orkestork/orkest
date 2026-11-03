@@ -17,8 +17,8 @@ const LEVELS: { value: Level; label: string; tone: string }[] = [
 ];
 
 /** Editor de un rol: niveles por área, permisos especiales, alcance y datos sensibles. */
-function RoleForm({ catalog, granted, role, hasSales }: {
-  catalog: AppGroup[]; granted: string[]; hasSales: boolean;
+function RoleForm({ catalog, granted, role, scopes }: {
+  catalog: AppGroup[]; granted: string[]; scopes: (typeof SCOPES)[number][];
   role?: { id: string; name: string; description: string | null };
 }) {
   const check = (key: string, label: string, hint?: string) => (
@@ -68,12 +68,12 @@ function RoleForm({ catalog, granted, role, hasSales }: {
       <div className="grid gap-4 lg:grid-cols-3">
         <section className="rounded-xl border border-stone-200 p-4">
           <h3 className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-stone-600">Alcance de registros</h3>
-          {hasSales ? SCOPES.map((sc) => (
+          {scopes.length ? scopes.map((sc) => (
             <label key={sc.key} className="flex items-start gap-2 py-1 text-sm">
               <input type="checkbox" name="permissions" value={sc.key} defaultChecked={granted.includes(sc.key)} className="mt-0.5 accent-[var(--ork-violet)]" />
               <span><b>{sc.label}:</b> solo los suyos<span className="block text-xs text-stone-500">{sc.hint}. Sin marcar, ve los de todo el equipo.</span></span>
             </label>
-          )) : <p className="text-sm text-stone-500">Disponible cuando Ventas está activa.</p>}
+          )) : <p className="text-sm text-stone-500">Disponible cuando Ventas o Campañas están activas.</p>}
         </section>
         <section className="rounded-xl border border-stone-200 p-4">
           <h3 className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-stone-600">Datos sensibles</h3>
@@ -101,7 +101,7 @@ export default async function Roles({ searchParams }: PageProps<"/settings/roles
     ctx.db.customEntity.findMany({ where: { active: true }, select: { key: true, labelPlural: true } }),
   ]);
   const catalog = buildCatalog(ctx.modules, customs);
-  const hasSales = ctx.hasModule("sales");
+  const scopes = SCOPES.filter((sc) => ctx.hasModule(sc.module));
   const open = typeof sp.edit === "string" ? sp.edit : "";
   const dup = typeof sp.dup === "string" ? roles.find((r) => r.id === sp.dup) : undefined;
   const creating = sp.new === "1" || !!dup;
@@ -135,7 +135,7 @@ export default async function Roles({ searchParams }: PageProps<"/settings/roles
               </div>
               {editing && !r.isSystem && (
                 <div id={`rol-${r.id}`} className="border-t border-stone-100 p-4">
-                  <RoleForm catalog={catalog} granted={r.permissions} role={r} hasSales={hasSales} />
+                  <RoleForm catalog={catalog} granted={r.permissions} role={r} scopes={scopes} />
                 </div>
               )}
               {r.isSystem && editing && <p className="border-t border-stone-100 p-4 text-sm text-stone-500">Acceso total. No editable.</p>}
@@ -146,7 +146,7 @@ export default async function Roles({ searchParams }: PageProps<"/settings/roles
         {creating && (
           <section id="nuevo" className="rounded-2xl border border-[var(--ork-violet)] bg-white p-4 shadow-sm">
             <p className="mb-4 font-semibold">{dup ? `Nuevo rol a partir de «${dup.name}»` : "Nuevo rol"}</p>
-            <RoleForm catalog={catalog} granted={dup && !dup.isSystem ? dup.permissions : dup?.isSystem ? ["*"] : []} hasSales={hasSales} />
+            <RoleForm catalog={catalog} granted={dup && !dup.isSystem ? dup.permissions : dup?.isSystem ? ["*"] : []} scopes={scopes} />
           </section>
         )}
       </div>

@@ -8,7 +8,7 @@ import { money } from "@/lib/ui/format";
 
 export const metadata = { title: "Productos" };
 const n = (v: unknown) => Number(v ?? 0);
-const KIND: Record<string, { label: string; tone: string }> = { GOODS: { label: "Almacenable", tone: "blue" }, SERVICE: { label: "Servicio", tone: "violet" }, COMBO: { label: "Kit", tone: "amber" } };
+const KIND: Record<string, { label: string; tone: string }> = { GOODS: { label: "Con inventario", tone: "blue" }, SERVICE: { label: "Servicio", tone: "violet" }, COMBO: { label: "Kit", tone: "amber" } };
 
 export default async function Products({ searchParams }: PageProps<"/products">) {
   const ctx = await requireModule("products", "products.read");
@@ -79,12 +79,12 @@ export default async function Products({ searchParams }: PageProps<"/products">)
     <>
       <ControlPanel title="Productos" newHref={ctx.can("products.write") ? "/products/new" : undefined}
         filters={[
-          { group: "uso", options: [{ key: "sold", label: "Se puede vender" }, { key: "purchased", label: "Se puede comprar" }] },
-          { group: "tipo", options: [{ key: "kind:GOODS", label: "Almacenables" }, { key: "kind:SERVICE", label: "Servicios" }, { key: "kind:COMBO", label: "Kits" }] },
+          { group: "uso", options: [{ key: "sold", label: "Disponible para venta" }, { key: "purchased", label: "Disponible para compra" }] },
+          { group: "tipo", options: [{ key: "kind:GOODS", label: "Con inventario" }, { key: "kind:SERVICE", label: "Servicios" }, { key: "kind:COMBO", label: "Kits" }] },
           { group: "stock", options: [{ key: "low", label: "Bajo el mínimo" }, { key: "archived", label: "Archivados" }] },
         ]}
         groupBys={[{ key: "category", label: "Categoría" }, { key: "kind", label: "Tipo de producto" }]}
-        views={[{ key: "kanban", label: "Kanban", icon: "kanban" }, { key: "list", label: "Lista", icon: "list" }]}
+        views={[{ key: "kanban", label: "Tablero", icon: "kanban" }, { key: "list", label: "Lista", icon: "list" }]}
         pager={{ from: products.length ? 1 : 0, to: products.length, total: products.length }} />
 
       {view === "list" ? (

@@ -4,6 +4,7 @@ import { ControlPanel } from "@/components/list/control-panel";
 import { DataTable, type Column, type Group, type Row } from "@/components/list/data-table";
 import { StatusPill } from "@/components/list/status-pill";
 import { OP_KIND, TRANSFER_STATUS } from "@/lib/ui/stock-labels";
+import { nowMs } from "@/lib/ui/clock";
 
 export const metadata = { title: "Transferencias" };
 const OP_ICON: Record<string, string> = { RECEIPT: "📥", INTERNAL: "⇄", DELIVERY: "🚚", MANUFACTURING: "🏭" };
@@ -26,9 +27,9 @@ export default async function Transfers({ searchParams }: PageProps<"/inventory/
   const whById = new Map(warehouses.map((w) => [w.id, w]));
   const opById = new Map(ops.map((o) => [o.id, o]));
 
-  // Resumen por almacén y tipo de operación (como el tablero de inventario de Odoo)
+  // Resumen por almacén y tipo de operación
   const openTransfers = await ctx.db.transfer.findMany({ where: { status: { in: OPEN } }, select: { operationTypeId: true, status: true, scheduledAt: true } });
-  const now = Date.now();
+  const now = nowMs();
   const summary = (opId: string) => {
     const ts = openTransfers.filter((t) => t.operationTypeId === opId);
     return { ready: ts.filter((t) => t.status === "ready").length, waiting: ts.filter((t) => t.status === "waiting").length, late: ts.filter((t) => t.scheduledAt.getTime() < now - 86400000).length, total: ts.length };

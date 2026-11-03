@@ -23,7 +23,7 @@ export function buildCatalog(activeModules: Set<string>, customEntities: { key: 
     groups.push({ key: m.key, name: APP_NAMES[m.key] ?? m.name, areas, extras: m.permissions.filter((p) => !used.has(p.key)) });
   }
   if (customEntities.length) {
-    groups.push({ key: "custom", name: "Objetos de Studio", extras: [], areas: customEntities.map((c) => ({ prefix: `custom.${c.key}`, label: c.labelPlural })) });
+    groups.push({ key: "custom", name: "Objetos de Builder", extras: [], areas: customEntities.map((c) => ({ prefix: `custom.${c.key}`, label: c.labelPlural })) });
   }
   return groups;
 }
@@ -32,7 +32,9 @@ export function buildCatalog(activeModules: Set<string>, customEntities: { key: 
 export const APP_NAMES: Record<string, string> = {
   crm: "CRM", sales: "Ventas", products: "Productos", inventory: "Inventario", purchasing: "Compras", manufacturing: "Manufactura",
   quality: "Calidad", invoicing: "Facturación", knowledge: "Conocimiento", sonar: "Sonar", radar: "Radar", analytics: "Analytics",
-  automations: "Automatizaciones", hr: "Talento humano", accounting: "Contabilidad", documents: "Documentos",
+  automations: "Automatizaciones", hr: "Talento humano", employee_portal: "Mi portal", accounting: "Contabilidad", documents: "Documentos",
+  campaigns: "Campañas",
+  maintenance: "Mantenimiento", logistics: "Logística",
 };
 
 export function levelOf(granted: readonly string[], prefix: string): Level {

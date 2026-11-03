@@ -17,7 +17,7 @@ export default async function Audit() {
           {logs.map((l) => (
             <tr key={l.id}>
               <td className={`${td} whitespace-nowrap text-xs`}>{dateTime(l.createdAt)}</td>
-              <td className={td}>{l.actorId ? userMap.get(l.actorId) ?? "API" : "ORKEST"}</td>
+              <td className={td}>{l.actorId ? userMap.get(l.actorId) ?? "API" : "Workezt"}</td>
               <td className={`${td} font-mono text-xs`}>{l.action}</td>
               <td className={`${td} text-xs`}>{l.entityType}{l.entityId ? ` · ${l.entityId.slice(-6)}` : ""}</td>
               <td className={`${td} max-w-sm truncate font-mono text-[11px] text-slate-500`}>{JSON.stringify(l.changes)}</td>

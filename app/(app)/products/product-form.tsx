@@ -18,7 +18,7 @@ function Row({ label, children, hint }: { label: string; children: ReactNode; hi
   );
 }
 
-/** Ficha editable del producto (estilo Odoo) — se usa para crear y editar. */
+/** Ficha editable del producto — se usa para crear y editar. */
 export function ProductForm({ product, categories, suppliers, defs, canWrite, salesTab, purchaseTab, inventoryTab, hideCost }: {
   product: P; categories: string[]; suppliers: { id: string; name: string }[]; defs: (FieldDef & { id: string })[]; canWrite: boolean; hideCost?: boolean;
   salesTab?: ReactNode; purchaseTab?: ReactNode; inventoryTab?: ReactNode;
@@ -33,29 +33,29 @@ export function ProductForm({ product, categories, suppliers, defs, canWrite, sa
             <input name="name" defaultValue={product.name} required placeholder="Nombre del producto" aria-label="Nombre del producto"
               className="w-full border-b border-transparent bg-transparent text-3xl font-semibold tracking-tight outline-none hover:border-stone-200 focus:border-[var(--ork-violet)]" />
             <div className="flex flex-wrap gap-5 text-sm">
-              <label className="flex items-center gap-2"><input type="checkbox" name="canBeSold" defaultChecked={product.canBeSold} className="h-4 w-4 accent-[var(--ork-violet)]" /> Se puede vender</label>
-              <label className="flex items-center gap-2"><input type="checkbox" name="canBePurchased" defaultChecked={product.canBePurchased} className="h-4 w-4 accent-[var(--ork-violet)]" /> Se puede comprar</label>
+              <label className="flex items-center gap-2"><input type="checkbox" name="canBeSold" defaultChecked={product.canBeSold} className="h-4 w-4 accent-[var(--ork-violet)]" /> Disponible para venta</label>
+              <label className="flex items-center gap-2"><input type="checkbox" name="canBePurchased" defaultChecked={product.canBePurchased} className="h-4 w-4 accent-[var(--ork-violet)]" /> Disponible para compra</label>
             </div>
           </div>
           <ProductThumb name={product.name || "Nuevo"} category={product.category} size={84} />
         </div>
 
         <Tabs tabs={[
-          { key: "general", label: "Información general", content: (
+          { key: "general", label: "Datos generales", content: (
             <div className="grid gap-x-10 gap-y-3 md:grid-cols-2">
               <div className="space-y-3">
-                <Row label="Tipo de producto" hint="Almacenable lleva existencias; servicio no; kit entrega sus componentes.">
-                  <select name="kind" defaultValue={product.kind} className={field}><option value="GOODS">Almacenable</option><option value="SERVICE">Servicio</option><option value="COMBO">Kit / combo</option></select>
+                <Row label="Tipo de producto" hint="Con inventario lleva existencias; un servicio no; un kit entrega sus componentes.">
+                  <select name="kind" defaultValue={product.kind} className={field}><option value="GOODS">Producto con inventario</option><option value="SERVICE">Servicio</option><option value="COMBO">Kit / combo</option></select>
                 </Row>
-                <Row label="Política de facturación">
-                  <select name="invoicePolicy" defaultValue={product.invoicePolicy} className={field}><option value="ORDER">Cantidades pedidas</option><option value="DELIVERY">Cantidades entregadas</option></select>
+                <Row label="Facturar según">
+                  <select name="invoicePolicy" defaultValue={product.invoicePolicy} className={field}><option value="ORDER">Lo pedido</option><option value="DELIVERY">Lo entregado</option></select>
                 </Row>
                 <Row label="Unidad de medida"><input name="unit" defaultValue={product.unit} className={field} /></Row>
                 <Row label="Categoría">
                   <input name="category" list="product-categories" defaultValue={product.category ?? ""} className={field} />
                   <datalist id="product-categories">{categories.map((c) => <option key={c} value={c} />)}</datalist>
                 </Row>
-                <Row label="Referencia interna"><input name="sku" defaultValue={product.sku} required className={`${field} font-mono`} /></Row>
+                <Row label="Código (SKU)"><input name="sku" defaultValue={product.sku} required className={`${field} font-mono`} /></Row>
               </div>
               <div className="space-y-3">
                 <Row label="Precio de venta"><input name="price" type="number" step="any" min="0" defaultValue={num(product.price)} className={`${field} text-right`} /></Row>

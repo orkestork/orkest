@@ -8,8 +8,8 @@ import type { Favorite } from "@/lib/ui/favorites";
 import { deleteFavorite, saveFavorite } from "@/app/(app)/favorites-actions";
 
 /**
- * Panel de control de listas (réplica del buscador de Odoo): Nuevo · título · caja de búsqueda con facetas,
- * sugerencias "Buscar <campo> por…", menú Filtros / Agrupar por / Favoritos, paginador y selector de vista.
+ * Encabezado de listas Workezt: título con conteo, selector de vista y botón Crear arriba;
+ * debajo, buscador con chips de filtro, sugerencias por campo, panel Filtrar / Agrupar / Vistas guardadas y paginador.
  * Todo vive en la URL (ver lib/ui/list-query.ts), así que se puede compartir y guardar como favorito.
  */
 export type FilterOption = { key: string; label: string };
@@ -38,13 +38,13 @@ const ICON = {
   graph: <path d="M3 17h14M5 14V9M9 14V5M13 14v-3M17 14V7" />,
 };
 const FACET_TONE: Record<Facet["kind"], string> = {
-  fav: "bg-amber-100 text-amber-900", filter: "bg-[var(--ork-lavender)]/35 text-[var(--ork-purple)]", search: "bg-stone-100 text-stone-800",
-  date: "bg-[var(--ork-lavender)]/35 text-[var(--ork-purple)]", custom: "bg-[var(--ork-lavender)]/35 text-[var(--ork-purple)]", group: "bg-teal-100 text-teal-900",
+  fav: "bg-[var(--ork-purple)] text-white", filter: "bg-[var(--ork-violet)]/10 text-[var(--ork-purple)]", search: "bg-stone-100 text-stone-800",
+  date: "bg-[var(--ork-violet)]/10 text-[var(--ork-purple)]", custom: "bg-[var(--ork-violet)]/10 text-[var(--ork-purple)]", group: "bg-sky-100 text-sky-900",
 };
 const sel = "rounded-md border border-stone-300 bg-white px-2 py-1.5 text-sm";
 const canonical = (qs: string) => { const p = new URLSearchParams(qs); for (const k of ["page", "all", "sort", "dir", "view"]) p.delete(k); p.sort(); return p.toString(); };
 
-export function ControlPanel({ title, newHref, newLabel = "Nuevo", filters, groupBys, views, pager, searchFields = [], dateFields = [], fields = [], favorites = [], entityType }: Props) {
+export function ControlPanel({ title, newHref, newLabel = "+ Crear", filters, groupBys, views, pager, searchFields = [], dateFields = [], fields = [], favorites = [], entityType }: Props) {
   const router = useRouter();
   const path = usePathname();
   const sp = useSearchParams();
@@ -86,7 +86,7 @@ export function ControlPanel({ title, newHref, newLabel = "Nuevo", filters, grou
   const toggleMulti = (k: string, v: string) => (sp.getAll(k).includes(v) ? removeMulti(k, v) : nav((p) => p.append(k, v)));
   const toggleGroup = (k: string) => setParam("group", (groups.includes(k) ? groups.filter((g) => g !== k) : [...groups, k]).join(",") || null);
 
-  // ── Facetas (en el orden de Odoo: favorito, filtros, fechas, personalizados, búsquedas, agrupación) ──
+  // ── Chips activos: vista guardada, filtros, fechas, condiciones, búsquedas y agrupación ──
   const current = canonical(sp.toString());
   const favActive = favorites.find((f) => f.qs && canonical(f.qs) === current);
   const facets: Facet[] = [];
@@ -112,7 +112,7 @@ export function ControlPanel({ title, newHref, newLabel = "Nuevo", filters, grou
     if (sp.get("q")) bySearch.set(searchFields[0]?.key ?? "q", [...(bySearch.get(searchFields[0]?.key ?? "q") ?? []), sp.get("q")!]);
     for (const [k, vs] of bySearch) facets.push({ id: `s:${k}`, kind: "search", icon: "🔍", label: `${searchFields.find((f) => f.key === k)?.label ?? "Buscar"}: ${vs.join(" o ")}`, remove: () => nav((p) => { const rest = p.getAll("s").filter((x) => !x.startsWith(`${k}:`)); p.delete("s"); rest.forEach((x) => p.append("s", x)); if (k === (searchFields[0]?.key ?? "q")) p.delete("q"); }) });
   }
-  if (groups.length && !favActive) facets.push({ id: "group", kind: "group", icon: "≡", label: groups.map(groupLabel).join(" › "), remove: () => setParam("group", null) });
+  if (groups.length && !favActive) facets.push({ id: "group", kind: "group", icon: "≡", label: `Agrupado: ${groups.map(groupLabel).join(" › ")}`, remove: () => setParam("group", null) });
   else if (groups.length && favActive) { /* la agrupación forma parte del favorito */ }
 
   const addSearch = (fieldKey: string) => {
@@ -152,25 +152,43 @@ export function ControlPanel({ title, newHref, newLabel = "Nuevo", filters, grou
   const customField = custom ? fieldOf(custom.field) : undefined;
 
   return (
-    <div className="mb-4 flex flex-wrap items-center gap-3">
-      <div className="flex items-center gap-3">
-        {newHref && <Link href={newHref} className="rounded-lg bg-[var(--ork-purple)] px-3.5 py-2 text-sm font-medium text-white hover:bg-[var(--ork-violet)]">{newLabel}</Link>}
-        <h1 className="font-display text-2xl uppercase leading-none tracking-tight">{title}</h1>
+    <div className="mb-5 space-y-4">
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="min-w-0">
+          <h1 className="font-display text-3xl font-bold leading-tight">{title}</h1>
+          {pager && <p className="text-sm text-stone-500">{pager.total.toLocaleString("es-CO")} {pager.total === 1 ? "registro" : "registros"}</p>}
+        </div>
+        <div className="ml-auto flex items-center gap-2">
+          {views.length > 1 && (
+            <div className="flex rounded-full bg-stone-100 p-1" role="group" aria-label="Tipo de vista">
+              {views.map((v) => (
+                <button key={v.key} type="button" title={v.label} aria-pressed={view === v.key} onClick={() => setParam("view", v.key === views[0].key ? null : v.key, true)}
+                  className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm ${view === v.key ? "bg-white font-medium text-[var(--ork-purple)] shadow-sm" : "text-stone-600 hover:text-stone-900"}`}>
+                  <svg viewBox="0 0 20 20" width="15" height="15" fill={v.icon === "kanban" ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">{ICON[v.icon]}</svg>
+                  <span className="hidden sm:inline">{v.label}</span>
+                </button>
+              ))}
+            </div>
+          )}
+          {newHref && <Link href={newHref} className="rounded-full bg-[var(--ork-purple)] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-[var(--ork-violet)]">{newLabel}</Link>}
+        </div>
       </div>
 
-      <div ref={box} className="relative order-3 w-full lg:order-none lg:mx-auto lg:w-[38rem]">
-        <div onClick={() => inputRef.current?.focus()} className="flex min-h-10 flex-wrap items-center gap-1.5 rounded-lg border border-stone-300 bg-white py-1 pl-3 pr-1 focus-within:border-[var(--ork-violet)]">
+      <div className="flex flex-wrap items-start gap-3">
+      <div ref={box} className="relative min-w-0 flex-1">
+        <div onClick={() => inputRef.current?.focus()} className="flex min-h-11 flex-wrap items-center gap-1.5 rounded-2xl border border-[var(--ork-rule)] bg-white py-1.5 pl-3.5 pr-1.5 shadow-sm focus-within:border-[var(--ork-violet)]/60">
           <svg viewBox="0 0 20 20" width="15" height="15" className="shrink-0 text-stone-500" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><circle cx="9" cy="9" r="6" /><path d="M14 14l4 4" /></svg>
           {facets.map((f) => (
-            <span key={f.id} className={`flex max-w-full items-center gap-1 rounded-md py-0.5 pl-1 pr-1 text-xs font-medium ${FACET_TONE[f.kind]}`}>
-              <span className={`grid h-5 min-w-5 place-items-center rounded px-1 text-[11px] ${f.kind === "fav" ? "bg-amber-400 text-white" : f.kind === "group" ? "bg-teal-700 text-white" : f.kind === "search" ? "bg-stone-500 text-white" : "bg-[var(--ork-violet)] text-white"}`} aria-hidden>{f.icon}</span>
+            <span key={f.id} className={`flex max-w-full items-center gap-1 rounded-full py-0.5 pl-3 pr-1 text-xs font-medium ${FACET_TONE[f.kind]}`}>
               <span className="truncate">{f.label}</span>
-              <button type="button" aria-label={`Quitar ${f.label}`} onClick={(e) => { e.stopPropagation(); f.remove(); }} className="rounded px-1 hover:bg-black/10">×</button>
+              <button type="button" aria-label={`Quitar ${f.label}`} onClick={(e) => { e.stopPropagation(); f.remove(); }} className="grid h-5 w-5 place-items-center rounded-full hover:bg-black/10">×</button>
             </span>
           ))}
-          <input ref={inputRef} value={text} onChange={(e) => { setText(e.target.value); setHi(0); }} onKeyDown={onKey} placeholder="Buscar…"
+          <input ref={inputRef} value={text} onChange={(e) => { setText(e.target.value); setHi(0); }} onKeyDown={onKey} placeholder={facets.length ? "Añadir búsqueda…" : `Buscar en ${title.toLowerCase()}…`}
             className="min-w-24 flex-1 bg-transparent py-1 text-sm outline-none" role="combobox" aria-label="Buscar" aria-autocomplete="list" aria-expanded={!!text} aria-controls="search-suggestions" />
-          <button type="button" aria-label="Filtros, agrupación y favoritos" aria-expanded={open} onClick={(e) => { e.stopPropagation(); setOpen(!open); }} className="grid h-8 w-8 place-items-center rounded-md text-stone-600 hover:bg-stone-100">▾</button>
+          <button type="button" aria-label="Filtrar, agrupar y vistas guardadas" aria-expanded={open} onClick={(e) => { e.stopPropagation(); setOpen(!open); }} className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm font-medium ${open ? "bg-[var(--ork-violet)]/10 text-[var(--ork-purple)]" : "text-stone-600 hover:bg-stone-100"}`}>
+            <svg viewBox="0 0 20 20" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M3 6h14M6 10h8M8.5 14h3" /></svg>Filtrar
+          </button>
         </div>
 
         {text && (
@@ -178,7 +196,7 @@ export function ControlPanel({ title, newHref, newLabel = "Nuevo", filters, grou
             {(searchFields.length ? searchFields : [{ key: "q", label: "" }]).map((f, i) => (
               <li key={f.key} role="option" aria-selected={i === hi}>
                 <button type="button" onMouseEnter={() => setHi(i)} onClick={() => addSearch(f.key)} className={`block w-full px-4 py-1.5 text-left ${i === hi ? "bg-[var(--ork-lavender)]/25" : ""}`}>
-                  Buscar {f.label && <b>{f.label}</b>} por: <i className="text-[var(--ork-violet)]">{text}</i>
+                  <span className="font-medium text-[var(--ork-purple)]">“{text}”</span> {f.label ? <>en <b>{f.label}</b></> : "en todo"}
                 </button>
               </li>
             ))}
@@ -189,7 +207,7 @@ export function ControlPanel({ title, newHref, newLabel = "Nuevo", filters, grou
           <div className="absolute left-1/2 z-30 mt-1 grid max-h-[72vh] w-[min(52rem,calc(100vw-2rem))] -translate-x-1/2 gap-4 overflow-y-auto rounded-xl border border-stone-200 bg-white p-4 text-sm shadow-xl md:grid-cols-[1.2fr_1fr_1fr]">
             {/* ── Filtros ── */}
             <div className="min-w-0">
-              <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-[var(--ork-pink)]">⏷ Filtros</p>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-500">Filtrar</p>
               {filters.map((g, gi) => (
                 <div key={g.group} className={gi ? "mt-2 border-t border-stone-100 pt-2" : ""}>
                   {g.options.map((o) => <button key={o.key} type="button" onClick={() => toggleFilter(o.key)} className={item}>{check(active.includes(o.key))}{o.label}</button>)}
@@ -212,7 +230,7 @@ export function ControlPanel({ title, newHref, newLabel = "Nuevo", filters, grou
               {fields.length > 0 && (
                 <div className="mt-2 border-t border-stone-100 pt-2">
                   {!custom ? (
-                    <button type="button" onClick={() => setCustom({ field: fields[0].key, op: OPS[fields[0].kind][0].op, value: "" })} className="px-2 py-1 text-[13px] font-medium text-[var(--ork-violet)] hover:underline">Agregar filtro personalizado</button>
+                    <button type="button" onClick={() => setCustom({ field: fields[0].key, op: OPS[fields[0].kind][0].op, value: "" })} className="px-2 py-1 text-[13px] font-medium text-[var(--ork-violet)] hover:underline">+ Condición avanzada</button>
                   ) : (
                     <div className="space-y-2 rounded-lg bg-stone-50 p-2">
                       <select aria-label="Campo" className={`${sel} w-full`} value={custom.field} onChange={(e) => { const f = fieldOf(e.target.value)!; setCustom({ field: f.key, op: OPS[f.kind][0].op, value: "" }); }}>
@@ -241,7 +259,7 @@ export function ControlPanel({ title, newHref, newLabel = "Nuevo", filters, grou
 
             {/* ── Agrupar por ── */}
             <div className="min-w-0 md:border-l md:border-stone-100 md:pl-4">
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-teal-700">≡ Agrupar por</p>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-500">Agrupar</p>
               {groupBys.map((o) => (
                 <button key={o.key} type="button" onClick={() => toggleGroup(o.key)} className={item}>
                   {check(groups.includes(o.key))}{o.label}{groups.includes(o.key) && groups.length > 1 && <span className="ml-auto text-[11px] text-stone-500">nivel {groups.indexOf(o.key) + 1}</span>}
@@ -249,8 +267,8 @@ export function ControlPanel({ title, newHref, newLabel = "Nuevo", filters, grou
               ))}
               {fields.some((f) => f.groupable) && (
                 <div className="mt-2 border-t border-stone-100 pt-2">
-                  <select aria-label="Agregar grupo personalizado" className={`${sel} w-full text-[13px]`} value="" onChange={(e) => e.target.value && toggleGroup(e.target.value)}>
-                    <option value="">Agregar grupo personalizado…</option>
+                  <select aria-label="Agrupar por otro campo" className={`${sel} w-full text-[13px]`} value="" onChange={(e) => e.target.value && toggleGroup(e.target.value)}>
+                    <option value="">Agrupar por otro campo…</option>
                     {fields.filter((f) => f.groupable && !groupBys.some((g) => g.key === f.key)).map((f) => <option key={f.key} value={f.key}>{f.label}</option>)}
                   </select>
                 </div>
@@ -259,8 +277,8 @@ export function ControlPanel({ title, newHref, newLabel = "Nuevo", filters, grou
 
             {/* ── Favoritos ── */}
             <div className="min-w-0 md:border-l md:border-stone-100 md:pl-4">
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-amber-700">★ Favoritos</p>
-              {favorites.length === 0 && <p className="px-2 py-1 text-[13px] text-stone-500">Aún no hay búsquedas guardadas.</p>}
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-500">Vistas guardadas</p>
+              {favorites.length === 0 && <p className="px-2 py-1 text-[13px] text-stone-500">Aún no hay vistas guardadas.</p>}
               {favorites.map((f) => (
                 <div key={f.id} className="group flex items-center">
                   <button type="button" onClick={() => router.push(`${path}?${f.qs || "all=1"}`)} className={`${item} min-w-0`}>
@@ -269,7 +287,7 @@ export function ControlPanel({ title, newHref, newLabel = "Nuevo", filters, grou
                     {f.shared && <span className="text-[10px] text-stone-500" title="Compartido">👥</span>}
                   </button>
                   {(f.mine || f.shared) && (
-                    <button type="button" aria-label={`Eliminar favorito ${f.name}`} onClick={() => start(async () => { await deleteFavorite(f.id, path); router.refresh(); })}
+                    <button type="button" aria-label={`Eliminar vista ${f.name}`} onClick={() => start(async () => { await deleteFavorite(f.id, path); router.refresh(); })}
                       className="px-2 text-stone-400 opacity-0 hover:text-rose-600 group-hover:opacity-100 focus:opacity-100">×</button>
                   )}
                 </div>
@@ -277,11 +295,11 @@ export function ControlPanel({ title, newHref, newLabel = "Nuevo", filters, grou
               {entityType && (
                 <div className="mt-2 border-t border-stone-100 pt-2">
                   {!saving ? (
-                    <button type="button" onClick={() => setSaving({ name: title, isDefault: false, shared: false })} className="px-2 py-1 text-[13px] font-medium text-[var(--ork-violet)] hover:underline">Guardar búsqueda actual</button>
+                    <button type="button" onClick={() => setSaving({ name: title, isDefault: false, shared: false })} className="px-2 py-1 text-[13px] font-medium text-[var(--ork-violet)] hover:underline">+ Guardar esta vista</button>
                   ) : (
                     <div className="space-y-2 rounded-lg bg-stone-50 p-2">
-                      <input aria-label="Nombre del favorito" autoFocus className={`${sel} w-full`} value={saving.name} onChange={(e) => setSaving({ ...saving, name: e.target.value })} onKeyDown={(e) => e.key === "Enter" && doSave()} />
-                      <label className="flex items-center gap-2 text-[13px]"><input type="checkbox" checked={saving.isDefault} onChange={(e) => setSaving({ ...saving, isDefault: e.target.checked })} className="accent-[var(--ork-violet)]" />Filtro predeterminado</label>
+                      <input aria-label="Nombre de la vista" autoFocus className={`${sel} w-full`} value={saving.name} onChange={(e) => setSaving({ ...saving, name: e.target.value })} onKeyDown={(e) => e.key === "Enter" && doSave()} />
+                      <label className="flex items-center gap-2 text-[13px]"><input type="checkbox" checked={saving.isDefault} onChange={(e) => setSaving({ ...saving, isDefault: e.target.checked })} className="accent-[var(--ork-violet)]" />Abrir siempre con esta vista</label>
                       <label className="flex items-center gap-2 text-[13px]"><input type="checkbox" checked={saving.shared} onChange={(e) => setSaving({ ...saving, shared: e.target.checked })} className="accent-[var(--ork-violet)]" />Compartido con todos</label>
                       <div className="flex gap-2">
                         <button type="button" disabled={pending} onClick={doSave} className="rounded-md bg-[var(--ork-purple)] px-3 py-1 text-xs font-medium text-white disabled:opacity-50">{pending ? "Guardando…" : "Guardar"}</button>
@@ -296,22 +314,13 @@ export function ControlPanel({ title, newHref, newLabel = "Nuevo", filters, grou
         )}
       </div>
 
-      <div className="ml-auto flex items-center gap-3">
-        {pager && (
-          <div className="flex items-center gap-1 text-sm text-stone-700">
-            <span className="tabular-nums">{pager.total ? `${pager.from.toLocaleString("es-CO")}-${pager.to.toLocaleString("es-CO")}` : "0"} / {pager.total.toLocaleString("es-CO")}</span>
-            <button type="button" aria-label="Página anterior" disabled={pager.from <= 1} onClick={() => setParam("page", String(Math.max(1, Number(sp.get("page") ?? 1) - 1)), true)} className="grid h-8 w-8 place-items-center rounded-md border border-stone-300 bg-white disabled:opacity-40">‹</button>
-            <button type="button" aria-label="Página siguiente" disabled={pager.to >= pager.total} onClick={() => setParam("page", String(Number(sp.get("page") ?? 1) + 1), true)} className="grid h-8 w-8 place-items-center rounded-md border border-stone-300 bg-white disabled:opacity-40">›</button>
-          </div>
-        )}
-        <div className="flex overflow-hidden rounded-lg border border-stone-300 bg-white">
-          {views.map((v) => (
-            <button key={v.key} type="button" title={v.label} aria-label={`Vista ${v.label}`} aria-pressed={view === v.key} onClick={() => setParam("view", v.key === views[0].key ? null : v.key, true)}
-              className={`grid h-9 w-10 place-items-center ${view === v.key ? "bg-[var(--ork-purple)] text-white" : "text-stone-600 hover:bg-stone-50"}`}>
-              <svg viewBox="0 0 20 20" width="16" height="16" fill={v.icon === "kanban" ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round">{ICON[v.icon]}</svg>
-            </button>
-          ))}
+      {pager && (
+        <div className="flex items-center gap-1 rounded-full border border-[var(--ork-rule)] bg-white px-1 py-1 text-xs text-stone-600">
+          <button type="button" aria-label="Página anterior" disabled={pager.from <= 1} onClick={() => setParam("page", String(Math.max(1, Number(sp.get("page") ?? 1) - 1)), true)} className="grid h-7 w-7 place-items-center rounded-full hover:bg-[var(--ork-violet)]/10 disabled:opacity-30">‹</button>
+          <span className="px-1 tabular-nums">{pager.total ? `${pager.from.toLocaleString("es-CO")}–${pager.to.toLocaleString("es-CO")}` : "0"} de {pager.total.toLocaleString("es-CO")}</span>
+          <button type="button" aria-label="Página siguiente" disabled={pager.to >= pager.total} onClick={() => setParam("page", String(Number(sp.get("page") ?? 1) + 1), true)} className="grid h-7 w-7 place-items-center rounded-full hover:bg-[var(--ork-violet)]/10 disabled:opacity-30">›</button>
         </div>
+      )}
       </div>
     </div>
   );
