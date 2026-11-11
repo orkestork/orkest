@@ -1,0 +1,78 @@
+// ═════════════════════════════ APP: FINANZAS (gestión financiera) ═════════════════════════════
+// Capa de gestión sobre lo que ya registran otras apps: facturas y cobros (Facturación), facturas de
+// proveedor (Facturación/Compras), nómina (Talento humano) y costos de flota (Logística). Aquí solo
+// viven los datos que no tienen otro hogar: gastos fijos, gastos sueltos, otros ingresos y presupuesto.
+// Basado en el módulo de finanzas de OR-K WORK.
+
+/// Gasto fijo o recurrente (arriendo, servicios, software…). Se proyecta en los meses que le tocan.
+model FinRecurringCost {
+  id             String    @id @default(cuid())
+  organizationId String
+  name           String
+  /// Clave de FIN_CATEGORIES (lib/apps/finance.ts)
+  category       String
+  vendor         String    @default("")
+  amount         Decimal   @db.Decimal(18, 2)
+  /// monthly | quarterly | semiannual | annual
+  frequency      String    @default("monthly")
+  /// Día del mes en que vence (1–31; se ajusta al último día en meses cortos)
+  dueDay         Int       @default(1)
+  /// Primer mes en que aplica (ancla el ciclo trimestral/anual)
+  startOn        DateTime  @db.Date
+  endOn          DateTime? @db.Date
+  active         Boolean   @default(true)
+  notes          String    @default("")
+  createdById    String?
+  createdAt      DateTime  @default(now())
+
+  @@index([organizationId, active])
+}
+
+/// Gasto real que no viene de una factura de proveedor (caja menor, tarjeta, pago de un gasto fijo…).
+model FinExpense {
+  id             String   @id @default(cuid())
+  organizationId String
+  spentOn        DateTime @db.Date
+  category       String
+  vendor         String   @default("")
+  description    String   @default("")
+  amount         Decimal  @db.Decimal(18, 2)
+  /// Gasto fijo al que corresponde este pago (marca la cuota del mes como pagada)
+  recurringId    String?
+  /// Cliente al que se le carga el gasto (para rentabilidad por cliente)
+  customerId     String?
+  paid           Boolean  @default(true)
+  createdById    String?
+  createdAt      DateTime @default(now())
+
+  @@index([organizationId, spentOn])
+  @@index([recurringId])
+}
+
+/// Ingreso que no pasa por Facturación (aportes, intereses, venta de activos) o cuota proyectada.
+model FinIncome {
+  id             String    @id @default(cuid())
+  organizationId String
+  receivedOn     DateTime  @db.Date
+  description    String
+  customerId     String?
+  amount         Decimal   @db.Decimal(18, 2)
+  /// received (recibido) | scheduled (proyectado, aún no llega)
+  status         String    @default("received")
+  createdById    String?
+  createdAt      DateTime  @default(now())
+
+  @@index([organizationId, receivedOn])
+}
+
+/// Presupuesto mensual por categoría.
+model FinBudget {
+  id             String  @id @default(cuid())
+  organizationId String
+  year           Int
+  month          Int
+  category       String
+  amount         Decimal @db.Decimal(18, 2)
+
+  @@unique([organizationId, year, month, category])
+}

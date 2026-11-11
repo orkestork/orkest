@@ -173,6 +173,19 @@ export const MODULES: ModuleDef[] = [
     permissions: [],
   },
   {
+    key: "finance", name: "Finance", group: "Finanzas", icon: "FI", status: "available",
+    description: "Ingresos, gastos, gastos fijos, presupuesto, flujo del mes y rentabilidad por cliente. Toma facturas, compras, nómina y flota de las demás apps.",
+    nav: [
+      { label: "Resumen", href: "/finance", permission: "finance.read" },
+      { label: "Gastos", href: "/finance/expenses", permission: "finance.read" },
+      { label: "Gastos fijos", href: "/finance/fixed", permission: "finance.read" },
+      { label: "Ingresos", href: "/finance/income", permission: "finance.read" },
+      { label: "Presupuesto", href: "/finance/budget", permission: "finance.read" },
+      { label: "Rentabilidad", href: "/finance/profitability", permission: "finance.read" },
+    ],
+    permissions: rw("finance", "finanzas"),
+  },
+  {
     key: "accounting", name: "Accounting", group: "Finanzas", icon: "AC", status: "planned",
     description: "Plan de cuentas, asientos y estados financieros.",
     nav: [], permissions: rw("accounting", "contabilidad"),

@@ -21,6 +21,7 @@ import { billFromPurchaseOrder, invoiceFromSalesOrder, registerPayment } from "@
 import { createCustomEntity, createRecord } from "@/lib/apps/custom-objects";
 import { seedHistory } from "./history";
 import { seedOperations } from "./seed-operations";
+import { seedFinance } from "./seed-finance";
 import { createNonconformity } from "@/lib/apps/quality";
 import { createKnowledge, link, publishKnowledge } from "@/lib/apps/knowledge";
 import { addSonarItem } from "@/lib/apps/sonar";
@@ -321,6 +322,9 @@ async function main() {
 
   // Operaciones: planta (prensa, troquel, ensamble), mantenimiento y logística con la ruta del pedido pendiente
   await seedOperations(M, { productionId: op1.id, productionNumber: op1.number, productId: pid("PV-ACP-100"), operatorId: produccion.id, logisticsId: inventario.id, salesOrderIds: [so2.id], customerId: customers[0].id });
+
+  // Finanzas: gastos fijos, gastos sueltos, ingreso proyectado y presupuesto del mes
+  await seedFinance({ ...P, actorId: finanzas.id }, { customerId: customers[0].id });
 
   // Cartera adicional (vencida hace 8 días)
   await P.db.invoice.create({ data: {

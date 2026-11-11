@@ -22,6 +22,7 @@ export const MODULE_LABEL: Record<string, string> = {
   campaigns: "Campañas",
   maintenance: "Mantenimiento", logistics: "Logística",
   hr: "Talento humano", employee_portal: "Mi portal",
+  finance: "Finanzas",
 };
 
 const MODULE_MATCH: Record<string, string[]> = {
@@ -31,6 +32,7 @@ const MODULE_MATCH: Record<string, string[]> = {
   campaigns: ["/campaigns"],
   maintenance: ["/maintenance"], logistics: ["/logistics"],
   hr: ["/hr"], employee_portal: ["/empleado"],
+  finance: ["/finance"],
 };
 
 export function launcherApps(ctx: OrgContext, customs: { key: string; labelPlural: string; icon: string }[] = []): LauncherApp[] {

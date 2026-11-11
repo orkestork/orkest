@@ -35,6 +35,7 @@ export const APP_NAMES: Record<string, string> = {
   automations: "Automatizaciones", hr: "Talento humano", employee_portal: "Mi portal", accounting: "Contabilidad", documents: "Documentos",
   campaigns: "Campañas",
   maintenance: "Mantenimiento", logistics: "Logística",
+  finance: "Finanzas",
 };
 
 export function levelOf(granted: readonly string[], prefix: string): Level {

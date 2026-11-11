@@ -27,6 +27,7 @@ const RULES: { prefix: string; module?: string; permission?: string }[] = [
   { prefix: "/print/production-runs", module: "manufacturing", permission: "manufacturing.read" },
   { prefix: "/maintenance", module: "maintenance", permission: "maintenance.read" },
   { prefix: "/logistics", module: "logistics", permission: "logistics.read" },
+  { prefix: "/finance", module: "finance", permission: "finance.read" },
   { prefix: "/invoicing/config", module: "invoicing", permission: "invoicing.write" },
   { prefix: "/invoicing", module: "invoicing", permission: "invoicing.read" },
   { prefix: "/quality", module: "quality", permission: "quality.read" },

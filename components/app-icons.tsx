@@ -103,6 +103,13 @@ const ICONS: Record<string, ReactNode> = {
     <path d="M46 46l12 12" stroke={C.pink} strokeWidth="8" strokeLinecap="round" />
     <path d="M28 35l5 5 9-10" stroke={C.white} strokeWidth="3.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
   </>),
+  finance: (<>
+    <rect x="6" y="34" width="12" height="24" rx="3" fill={C.lav} />
+    <rect x="22" y="22" width="12" height="36" rx="3" fill={C.violet} style={mx} />
+    <rect x="38" y="10" width="12" height="48" rx="3" fill={C.teal} style={mx} />
+    <circle cx="48" cy="16" r="10" fill={C.amber} style={mx} />
+    <path d="M6 30L22 18l12 6 18-16" stroke={C.deep} strokeWidth="3.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+  </>),
   invoicing: (<>
     <path d="M10 4h30l14 14v42H10z" fill={C.lav} />
     <path d="M40 4v14h14z" fill={C.violet} />
@@ -242,7 +249,7 @@ export const FAMILIES: Record<Family, { name: string; light: string; base: strin
 const FAMILY_OF: Record<string, Family> = {
   inventory: "industry", products: "industry", manufacturing: "industry", maintenance: "industry", logistics: "industry",
   quality: "industry", wrench: "industry", truck: "industry", flask: "industry",
-  invoicing: "admin", purchasing: "admin", analytics: "admin", import: "admin",
+  invoicing: "admin", purchasing: "admin", analytics: "admin", import: "admin", finance: "admin",
   crm: "commercial", sales: "commercial", campaigns: "commercial", studio: "commercial",
   ask: "intel", automations: "intel", radar: "intel", sonar: "intel", dashboard: "intel",
 };
@@ -276,6 +283,13 @@ const GLYPHS: Record<string, (c: string) => ReactNode> = {
   quality: (c) => (<>
     <path d="M32 12l17 6v12c0 10.5-7.3 17.6-17 21-9.7-3.4-17-10.5-17-21V18z" fill={W} />
     <path d="M24 31.5l5.5 5.5L41 25.5" fill="none" stroke={c} strokeWidth="4.5" strokeLinecap="round" strokeLinejoin="round" />
+  </>),
+  finance: (c) => (<>
+    <rect x="12" y="34" width="8" height="15" rx="2" {...S} />
+    <rect x="24" y="26" width="8" height="23" rx="2" {...S} />
+    <rect x="36" y="18" width="8" height="31" rx="2" fill={W} />
+    <circle cx="46" cy="17" r="8" fill={W} stroke={c} strokeWidth="2.5" />
+    <path d="M46 12.5v9M48.5 14.5c-.6-.8-1.5-1.2-2.6-1.2-1.4 0-2.4.7-2.4 1.8 0 2.6 5.2 1.2 5.2 4 0 1.1-1.1 1.9-2.6 1.9-1.2 0-2.2-.5-2.8-1.3" fill="none" stroke={c} strokeWidth="1.6" strokeLinecap="round" />
   </>),
   invoicing: (c) => (<>
     <path d="M17 12h22l8 8v28l-4-3-4 3-4-3-4 3-4-3-4 3-4-3-2 1.5z" fill={W} />

@@ -30,6 +30,8 @@ export const TENANT_MODELS = new Set([
   "DeliveryRoute", "TransportCost", "TransportIncident", "OperationsReport",
   // Campañas y calendario comercial
   "Campaign", "CampaignDaily", "SellerDailyClose", "SellerReportEvent", "CalendarConfig", "SellerCalendarSetting", "CalendarHoliday",
+  // Finanzas
+  "FinRecurringCost", "FinExpense", "FinIncome", "FinBudget",
 ]);
 
 const WHERE_OPS = new Set([

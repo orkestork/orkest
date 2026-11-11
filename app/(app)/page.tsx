@@ -1,7 +1,8 @@
 import Link from "@/components/plink";
 import { requireContext } from "@/lib/core/context";
 import { launcherApps } from "@/lib/launcher";
-import { AppIcon } from "@/components/app-icons";
+import { AppIcon, familyOf } from "@/components/app-icons";
+import { AppGrid } from "@/components/app-grid";
 import { visibleInsightWhere } from "@/lib/radar/visibility";
 
 export const metadata = { title: "Inicio" };
@@ -40,17 +41,20 @@ export default async function Home() {
         </div>
       )}
 
-      <h2 className="mt-8 font-display text-2xl font-bold text-[var(--ork-ink)] sm:text-3xl">Aplicaciones</h2>
-      <div className="mx-auto mt-6 grid max-w-[1000px] grid-cols-3 gap-x-3 gap-y-8 sm:grid-cols-4 md:grid-cols-6">
-        {apps.map((a) => (
-          <Link key={a.key} href={a.href} className="flex flex-col items-center gap-2.5 rounded-3xl text-center outline-none focus-visible:ring-2 focus-visible:ring-[var(--ork-violet)]">
-            <span className="app-tile grid h-[84px] w-[84px] place-items-center sm:h-[96px] sm:w-[96px]">
-              <AppIcon name={a.icon} size={76} />
-            </span>
-            <span className="max-w-[124px] text-[13px] font-medium leading-tight text-stone-800">{a.name}</span>
-          </Link>
-        ))}
-      </div>
+      <AppGrid
+        items={apps.map((a) => ({
+          key: a.key,
+          family: familyOf(a.icon),
+          tile: (
+            <Link href={a.href} className="flex flex-col items-center gap-2.5 rounded-3xl text-center outline-none focus-visible:ring-2 focus-visible:ring-[var(--ork-violet)]">
+              <span className="app-tile grid h-[84px] w-[84px] place-items-center sm:h-[96px] sm:w-[96px]">
+                <AppIcon name={a.icon} size={76} />
+              </span>
+              <span className="max-w-[124px] text-[13px] font-medium leading-tight text-stone-800">{a.name}</span>
+            </Link>
+          ),
+        }))}
+      />
     </div>
   );
 }
